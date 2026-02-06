@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply text-white font-body;
+    background: linear-gradient(-45deg, #0a0a0a, #1a0a1f, #0a1a2f, #0f1419);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+  }
+  
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  /* Prevent flash of unstyled content - set initial states */
+  .hero-title-line-1,
+  .hero-title-line-2,
+  .hero-subtitle,
+  .hero-cta-btn,
+  .scroll-indicator,
+  .section-heading,
+  .feature-card,
+  .feature-icon,
+  .value-card,
+  .gallery-item,
+  .category-btn,
+  .info-card,
+  .about-hero-title,
+  .about-hero-subtitle,
+  .story-content,
+  .team-content,
+  .gallery-hero-title,
+  .gallery-hero-subtitle,
+  .contact-hero-title,
+  .contact-hero-subtitle,
+  .contact-form,
+  .cta-content {
+    opacity: 0;
+  }
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 10px rgba(0, 255, 204, 0.5),
+                 0 0 20px rgba(0, 255, 204, 0.3);
+  }
+  
+  .glass {
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  }
+  
+  /* Custom slider styles */
+  .slider {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00ffcc, #3b82f6);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+  }
+  
+  .slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00ffcc, #3b82f6);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+  }
+  
+  .slider::-webkit-slider-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+  }
+  
+  .slider::-moz-range-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+  }
+}
