@@ -5,6 +5,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Canvas } from '@react-three/fiber'
 import { PerspectiveCamera, Environment, useGLTF } from '@react-three/drei'
+import { useControls } from 'leva'
 
 
 
@@ -15,14 +16,35 @@ gsap.registerPlugin(ScrollTrigger)
 // Keyboard 3D Model Component
 function KeyboardModel({ groupRef }) {
   const { scene } = useGLTF('/models/Keyboard_60percent.gltf')
+  
+  // Leva controls for position and rotation
+  const { position, rotation, scale } = useControls('Keyboard Transform', {
+    position: {
+      value: [0, 0, 0],
+      step: 0.1,
+      label: 'Position (X, Y, Z)'
+    },
+    rotation: {
+      value: [0, 0, 0],
+      step: 0.01,
+      label: 'Rotation (X, Y, Z)'
+    },
+    scale: {
+      value: 2.5,
+      min: 0.5,
+      max: 5,
+      step: 0.1,
+      label: 'Scale'
+    }
+  })
 
   return (
     <group ref={groupRef}>
       <primitive 
         object={scene} 
-        scale={2.5} 
-        position={[0, 0, 0]}
-        rotation={[0, 0, 0]}
+        scale={scale} 
+        position={position}
+        rotation={rotation}
       />
     </group>
   )

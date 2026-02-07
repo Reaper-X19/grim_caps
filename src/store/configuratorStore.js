@@ -5,7 +5,7 @@ const useConfiguratorStore = create((set, get) => ({
   layers: [
     {
       id: 'layer-1',
-      name: 'Layer 1',
+      name: 'Set 1',
       selectedKeys: [],
       texture: null,
       textureUrl: null,
@@ -25,6 +25,8 @@ const useConfiguratorStore = create((set, get) => ({
   
   // Key selection state (global, not per-layer)
   selectedKeys: [],
+  selectionLocked: false, // When true, selection is locked and user must click "Edit Selection" to modify
+  selectionMode: false, // When true, user can click keys to select them
   
   // Per-key customizations: { keyName: { layerId, texture, baseColor, textureTransform } }
   keyCustomizations: {},
@@ -40,7 +42,7 @@ const useConfiguratorStore = create((set, get) => ({
         ...state.layers,
         {
           id: newId,
-          name: `Layer ${state.layers.length + 1}`,
+          name: `Set ${state.layers.length + 1}`,
           selectedKeys: [],
           texture: null,
           textureUrl: null,
@@ -197,7 +199,17 @@ const useConfiguratorStore = create((set, get) => ({
     return { selectedKeys: [...state.selectedKeys, keyName] }
   }),
   
-  clearSelection: () => set({ selectedKeys: [] }),
+  clearSelection: () => set({ selectedKeys: [], selectionLocked: false, selectionMode: false }),
+  
+  // Selection mode actions
+  setSelectionMode: (active) => set({ selectionMode: active }),
+  
+  startSelecting: () => set({ selectionMode: true, selectionLocked: false }),
+  
+  // Selection lock actions
+  setSelectionLocked: (locked) => set({ selectionLocked: locked }),
+  
+  toggleSelectionLock: () => set((state) => ({ selectionLocked: !state.selectionLocked })),
   
   // Apply current layer settings to selected keys
   applyToSelectedKeys: () => set((state) => {
@@ -238,7 +250,9 @@ const useConfiguratorStore = create((set, get) => ({
     
     return {
       keyCustomizations: newCustomizations,
-      selectedKeys: [] // Clear selection after applying
+      selectedKeys: [], // Clear selection after applying
+      selectionLocked: false, // Unlock after applying
+      selectionMode: false // Exit selection mode
     }
   }),
   
@@ -298,21 +312,27 @@ const useConfiguratorStore = create((set, get) => ({
     })
     
     if (conflicts.length > 0) {
-      console.warn('Cannot paste to keys already used in other layers:', conflicts)
+      console.warn('Cannot paste to keys already used in other sets:', conflicts)
       return state
     }
     
-    // Apply copied style
+    // Create new keyGroup from current selection for correct bounding box
+    const selectedKeysList = [...state.selectedKeys]
+    
+    // Apply copied style with NEW keyGroup
     state.selectedKeys.forEach(keyName => {
       newCustomizations[keyName] = {
         layerId: state.activeLayerId,
-        ...state.copiedStyle
+        ...state.copiedStyle,
+        keyGroup: selectedKeysList // CRITICAL: Use new selection as keyGroup
       }
     })
     
     return {
       keyCustomizations: newCustomizations,
-      selectedKeys: []
+      selectedKeys: [],
+      selectionLocked: false, // Unlock after paste
+      selectionMode: false // Exit selection mode
     }
   }),
   

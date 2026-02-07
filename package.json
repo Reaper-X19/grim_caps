@@ -16,6 +16,7 @@
     "@react-three/postprocessing": "^3.0.4",
     "@supabase/supabase-js": "^2.95.3",
     "gsap": "^3.14.2",
+    "leva": "^0.10.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-dropzone": "^14.4.0",

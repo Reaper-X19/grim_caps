@@ -7,7 +7,6 @@ export default function KeyboardScene() {
   return (
     <div className="w-full h-full rounded-lg overflow-hidden">
       <Canvas
-        shadows
         gl={{ 
           antialias: true, 
           alpha: true,
@@ -18,37 +17,41 @@ export default function KeyboardScene() {
         {/* Camera - positioned for optimal keyboard view */}
         <PerspectiveCamera makeDefault position={[0, 8, 12]} fov={45} />
         
-        {/* Lighting Setup */}
-        <ambientLight intensity={0.5} />
+        {/* Lighting Setup - Improved for clarity */}
+        <ambientLight intensity={0.8} />
         
-        {/* Key Light - main illumination */}
+        {/* Key Light - main illumination (no shadows to avoid stripes) */}
         <directionalLight
           position={[10, 10, 5]}
-          intensity={2}
-          castShadow
-          shadow-mapSize={[2048, 2048]}
+          intensity={2.5}
         />
         
-        {/* Fill Light - soften shadows */}
+        {/* Fill Light - soften shadows and illuminate from opposite side */}
         <directionalLight
-          position={[-5, 5, -5]}
-          intensity={0.8}
+          position={[-5, 8, -5]}
+          intensity={1.2}
         />
         
-        {/* Rim Light - edge definition */}
-        <pointLight position={[0, 8, -10]} intensity={1.2} color="#00ffcc" />
+        {/* Top Light - illuminate from above for better key visibility */}
+        <directionalLight
+          position={[0, 15, 0]}
+          intensity={1}
+        />
+        
+        {/* Rim Light - edge definition with accent color */}
+        <pointLight position={[0, 8, -10]} intensity={0.8} color="#00ffcc" />
         
         {/* 3D Model */}
         <Suspense fallback={null}>
           <KeyboardModel />
         </Suspense>
         
-        {/* Contact Shadows for realism */}
+        {/* Contact Shadows for subtle depth (reduced opacity to avoid artifacts) */}
         <ContactShadows
           position={[0, -1, 0]}
-          opacity={0.5}
+          opacity={0.25}
           scale={15}
-          blur={2.5}
+          blur={3}
           far={4}
         />
         

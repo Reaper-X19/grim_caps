@@ -4,12 +4,17 @@ import { KEY_PRESETS, formatKeyName, getPresetDisplayName } from '../../data/key
 
 export default function KeySelectionPanel() {
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
+  const selectionLocked = useConfiguratorStore((state) => state.selectionLocked)
+  const selectionMode = useConfiguratorStore((state) => state.selectionMode)
   const keyCustomizations = useConfiguratorStore((state) => state.keyCustomizations)
   const copiedStyle = useConfiguratorStore((state) => state.copiedStyle)
   const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
   
   const setSelectedKeys = useConfiguratorStore((state) => state.setSelectedKeys)
+  const toggleKeySelection = useConfiguratorStore((state) => state.toggleKeySelection)
   const clearSelection = useConfiguratorStore((state) => state.clearSelection)
+  const startSelecting = useConfiguratorStore((state) => state.startSelecting)
+  const setSelectionLocked = useConfiguratorStore((state) => state.setSelectionLocked)
   const applyToSelectedKeys = useConfiguratorStore((state) => state.applyToSelectedKeys)
   const clearSelectedKeys = useConfiguratorStore((state) => state.clearSelectedKeys)
   const copyStyle = useConfiguratorStore((state) => state.copyStyle)
@@ -18,16 +23,51 @@ export default function KeySelectionPanel() {
   const [showAllPresets, setShowAllPresets] = useState(false)
   
   const handlePresetClick = (presetKey) => {
+    if (!selectionMode || selectionLocked) return // Require selection mode
+    
     const keys = KEY_PRESETS[presetKey]
     if (keys) {
-      setSelectedKeys(keys)
+      // Toggle behavior: if all keys in preset are selected, deselect them; otherwise select them
+      const allSelected = keys.every(key => selectedKeys.includes(key))
+      
+      if (allSelected) {
+        // Deselect all keys in this preset
+        const newSelection = selectedKeys.filter(key => !keys.includes(key))
+        setSelectedKeys(newSelection)
+      } else {
+        // Add all keys from preset (toggle each one)
+        const newSelection = [...selectedKeys]
+        keys.forEach(key => {
+          if (!newSelection.includes(key)) {
+            newSelection.push(key)
+          }
+        })
+        setSelectedKeys(newSelection)
+      }
     }
   }
   
   const handleSelectAll = () => {
+    if (!selectionMode || selectionLocked) return // Require selection mode
+    
     const allKeys = Object.values(KEY_PRESETS).flat().filter(k => k)
     const uniqueKeys = [...new Set(allKeys)]
     setSelectedKeys(uniqueKeys)
+  }
+  
+  const handleStartSelecting = () => {
+    startSelecting()
+  }
+  
+  const handleDoneSelection = () => {
+    if (selectedKeys.length > 0) {
+      setSelectionLocked(true)
+    }
+  }
+  
+  const handleEditSelection = () => {
+    setSelectionLocked(false)
+    startSelecting() // Re-enter selection mode
   }
   
   // Check if any selected keys have conflicts
@@ -43,8 +83,8 @@ export default function KeySelectionPanel() {
   })
   
   // Primary presets to show by default
-  const primaryPresets = ['wasd', 'arrows', 'numbers', 'row1', 'row2', 'row3']
-  const secondaryPresets = ['row4', 'row5', 'function', 'modifiers', 'homeRow', 'alpha']
+  const primaryPresets = ['wasd', 'arrows', 'numbers', 'row2', 'row3', 'row4']
+  const secondaryPresets = ['row1', 'row5', 'row6', 'function', 'modifiers', 'homeRow', 'alpha']
   
   return (
     <div className="space-y-4">
@@ -58,67 +98,120 @@ export default function KeySelectionPanel() {
         </span>
       </div>
       
+      {/* Mode Indicators */}
+      {!selectionMode && !selectionLocked && selectedKeys.length === 0 && (
+        <div className="p-4 bg-grim-darker/50 border border-gray-700/30 rounded-lg text-center">
+          <p className="text-sm text-gray-400 mb-3">
+            Click the button below to start selecting keys
+          </p>
+          <button
+            onClick={handleStartSelecting}
+            className="w-full px-4 py-3 bg-grim-accent hover:bg-grim-accent/90 text-grim-darker font-semibold rounded-lg transition-all"
+          >
+            🎯 Start Selecting Keys
+          </button>
+        </div>
+      )}
+      
+      {/* Selection Mode Active */}
+      {selectionMode && !selectionLocked && (
+        <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-center gap-2">
+          <span className="text-blue-400 text-lg">🎯</span>
+          <div>
+            <p className="text-xs font-semibold text-blue-400">Selecting Mode Active</p>
+            <p className="text-xs text-gray-400">Click keys or use presets below</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Selection Locked Status */}
+      {selectionLocked && (
+        <div className="p-3 bg-grim-accent/10 border border-grim-accent/30 rounded-lg flex items-center gap-2">
+          <span className="text-grim-accent text-lg">🔒</span>
+          <div>
+            <p className="text-xs font-semibold text-grim-accent">Selection Locked</p>
+            <p className="text-xs text-gray-400">Click "Edit Selection" to modify</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Done Selection / Edit Selection Button */}
+      {(selectionMode || selectionLocked) && selectedKeys.length > 0 && (
+        <button
+          onClick={selectionLocked ? handleEditSelection : handleDoneSelection}
+          className={`w-full px-4 py-3 font-semibold rounded-lg transition-all ${
+            selectionLocked
+              ? 'bg-gray-700/50 hover:bg-gray-700/70 border border-gray-600 text-gray-300'
+              : 'bg-grim-accent hover:bg-grim-accent/90 text-grim-darker'
+          }`}
+        >
+          {selectionLocked ? '✏️ Edit Selection' : '✓ Done Selection'}
+        </button>
+      )}
+      
       {/* Conflict Warning */}
       {hasConflicts && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-xs text-red-400 font-semibold mb-1">⚠️ Layer Conflict</p>
+          <p className="text-xs text-red-400 font-semibold mb-1">⚠️ Set Conflict</p>
           <p className="text-xs text-gray-400">
-            {conflictKeys.length} key(s) already assigned to another layer. Clear them first to reassign.
+            {conflictKeys.length} key(s) already assigned to another set. Clear them first to reassign.
           </p>
         </div>
       )}
       
-      {/* Quick Select Presets */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Quick Select</p>
-          <button
-            onClick={() => setShowAllPresets(!showAllPresets)}
-            className="text-xs text-grim-accent hover:text-grim-accent/80 transition-colors"
-          >
-            {showAllPresets ? 'Show Less' : 'Show More'}
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-2">
-          {primaryPresets.map(presetKey => (
+      {/* Quick Select Presets - Only show when in selection mode */}
+      {selectionMode && !selectionLocked && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Quick Select</p>
             <button
-              key={presetKey}
-              onClick={() => handlePresetClick(presetKey)}
-              className="px-3 py-2 bg-grim-dark hover:bg-grim-dark/70 border border-grim-accent/20 hover:border-grim-accent/40 rounded-lg text-xs font-medium text-gray-300 transition-all"
+              onClick={() => setShowAllPresets(!showAllPresets)}
+              className="text-xs text-grim-accent hover:text-grim-accent/80 transition-colors"
             >
-              {getPresetDisplayName(presetKey)}
+              {showAllPresets ? 'Show Less' : 'Show More'}
             </button>
-          ))}
+          </div>
           
-          {showAllPresets && secondaryPresets.map(presetKey => (
+          <div className="grid grid-cols-2 gap-2">
+            {primaryPresets.map(presetKey => (
+              <button
+                key={presetKey}
+                onClick={() => handlePresetClick(presetKey)}
+                className="px-3 py-2 bg-grim-dark hover:bg-grim-dark/70 border border-grim-accent/20 hover:border-grim-accent/40 rounded-lg text-xs font-medium text-gray-300 transition-all"
+              >
+                {getPresetDisplayName(presetKey)}
+              </button>
+            ))}
+            
+            {showAllPresets && secondaryPresets.map(presetKey => (
+              <button
+                key={presetKey}
+                onClick={() => handlePresetClick(presetKey)}
+                className="px-3 py-2 bg-grim-dark hover:bg-grim-dark/70 border border-grim-accent/20 hover:border-grim-accent/40 rounded-lg text-xs font-medium text-gray-300 transition-all"
+              >
+                {getPresetDisplayName(presetKey)}
+              </button>
+            ))}
+          </div>
+          
+          {/* Select All / Clear */}
+          <div className="grid grid-cols-2 gap-2">
             <button
-              key={presetKey}
-              onClick={() => handlePresetClick(presetKey)}
-              className="px-3 py-2 bg-grim-dark hover:bg-grim-dark/70 border border-grim-accent/20 hover:border-grim-accent/40 rounded-lg text-xs font-medium text-gray-300 transition-all"
+              onClick={handleSelectAll}
+              className="px-3 py-2 bg-grim-accent/10 hover:bg-grim-accent/20 border border-grim-accent/30 rounded-lg text-xs font-medium text-grim-accent transition-all"
             >
-              {getPresetDisplayName(presetKey)}
+              Select All
             </button>
-          ))}
+            <button
+              onClick={clearSelection}
+              disabled={selectedKeys.length === 0}
+              className="px-3 py-2 bg-gray-700/30 hover:bg-gray-700/50 border border-gray-600/30 rounded-lg text-xs font-medium text-gray-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Clear Selection
+            </button>
+          </div>
         </div>
-        
-        {/* Select All / Clear */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={handleSelectAll}
-            className="px-3 py-2 bg-grim-accent/10 hover:bg-grim-accent/20 border border-grim-accent/30 rounded-lg text-xs font-medium text-grim-accent transition-all"
-          >
-            Select All
-          </button>
-          <button
-            onClick={clearSelection}
-            disabled={selectedKeys.length === 0}
-            className="px-3 py-2 bg-gray-700/30 hover:bg-gray-700/50 border border-gray-600/30 rounded-lg text-xs font-medium text-gray-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Clear Selection
-          </button>
-        </div>
-      </div>
+      )}
       
       {/* Actions */}
       <div className="space-y-2">

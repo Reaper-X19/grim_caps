@@ -20,12 +20,13 @@ export default function KeyboardModel() {
   
   // Get state from store
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
+  const selectionLocked = useConfiguratorStore((state) => state.selectionLocked)
+  const selectionMode = useConfiguratorStore((state) => state.selectionMode)
   const keyCustomizations = useConfiguratorStore((state) => state.keyCustomizations)
   const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
   const layers = useConfiguratorStore((state) => state.layers)
   
   const toggleKeySelection = useConfiguratorStore((state) => state.toggleKeySelection)
-  const addToSelection = useConfiguratorStore((state) => state.addToSelection)
   const setSelectedKeys = useConfiguratorStore((state) => state.setSelectedKeys)
   
   // Get active layer
@@ -48,6 +49,9 @@ export default function KeyboardModel() {
     const handleClick = (event) => {
       if (event.target !== gl.domElement) return
       
+      // Only allow selection when in selection mode and not locked
+      if (!selectionMode || selectionLocked) return
+      
       raycaster.setFromCamera(pointer, camera)
       
       if (!groupRef.current) return
@@ -60,13 +64,8 @@ export default function KeyboardModel() {
         if (keycap) {
           const keyName = keycap.object.name
           
-          if (event.ctrlKey || event.metaKey) {
-            toggleKeySelection(keyName)
-          } else if (event.shiftKey) {
-            addToSelection(keyName)
-          } else {
-            setSelectedKeys([keyName])
-          }
+          // Always use toggle behavior for intuitive on/off clicking
+          toggleKeySelection(keyName)
           
           event.stopPropagation()
         }
@@ -78,7 +77,7 @@ export default function KeyboardModel() {
     return () => {
       gl.domElement.removeEventListener('click', handleClick)
     }
-  }, [camera, raycaster, pointer, gl, toggleKeySelection, addToSelection, setSelectedKeys])
+  }, [camera, raycaster, pointer, gl, toggleKeySelection, selectionMode, selectionLocked])
   
   // Apply materials and real-time updates
   useEffect(() => {
