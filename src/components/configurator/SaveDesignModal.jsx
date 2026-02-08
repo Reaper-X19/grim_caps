@@ -42,6 +42,7 @@ export default function SaveDesignModal({ isOpen, onClose }) {
   const activeLayer = layers.find(l => l.id === activeLayerId)
 
   // Validation
+  // Validation for enabling the save button
   const canSave = () => {
     if (!formData.title.trim()) return { valid: false, message: 'Title is required' }
     if (formData.title.length < 3) return { valid: false, message: 'Title must be at least 3 characters' }
@@ -49,23 +50,28 @@ export default function SaveDesignModal({ isOpen, onClose }) {
     if (selectedKeys.length === 0) return { valid: false, message: 'Please select at least one key' }
     if (!activeLayer?.textureUrl) return { valid: false, message: 'Please upload a texture' }
     
-    // Check auth for private designs
-    if (!formData.isPublic && !user) {
-      return { valid: false, message: 'Please sign in to save private designs', requiresAuth: true }
-    }
-    
     return { valid: true }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
+    console.log('SaveDesignModal - handleSubmit called')
+    console.log('formData.isPublic:', formData.isPublic)
+    console.log('user:', user)
+    
+    // Check auth FIRST for private designs
+    if (!formData.isPublic && !user) {
+      console.log('Private design requires auth - showing auth modal')
+      setShowAuthModal(true)
+      return
+    }
+    
+    // Then validate form
     const validation = canSave()
+    console.log('validation result:', validation)
+    
     if (!validation.valid) {
-      if (validation.requiresAuth) {
-        setShowAuthModal(true)
-        return
-      }
       setError(validation.message)
       return
     }
