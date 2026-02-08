@@ -152,6 +152,26 @@ export default function DraggableTexturePreview({
     }
   }, [isDragging, dragStart, positionX, positionY, zoom])
 
+  // Attach wheel listener with passive: false to prevent scrollbar scrolling
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const wheelHandler = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const delta = e.deltaY > 0 ? -0.1 : 0.1
+      const newZoom = Math.max(minZoom, Math.min(3.0, zoom + delta))
+      onZoomChange(newZoom)
+    }
+
+    container.addEventListener('wheel', wheelHandler, { passive: false })
+    
+    return () => {
+      container.removeEventListener('wheel', wheelHandler)
+    }
+  }, [zoom, minZoom, onZoomChange])
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -180,7 +200,6 @@ export default function DraggableTexturePreview({
         }}
         onMouseDown={handlePointerDown}
         onTouchStart={handlePointerDown}
-        onWheel={handleWheel}
       >
         {/* Texture Image Layer */}
         <div 
