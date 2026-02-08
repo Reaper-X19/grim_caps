@@ -61,13 +61,35 @@ export default function SaveDesignModal({ isOpen, onClose }) {
       // Calculate pricing
       const pricing = calculateDesignPrice(selectedKeys.length)
 
+      // Upload texture to Supabase storage if it's a blob URL
+      let textureUrl = activeLayer.textureUrl
+      if (textureUrl && textureUrl.startsWith('blob:')) {
+        try {
+          // Fetch the blob
+          const response = await fetch(textureUrl)
+          const blob = await response.blob()
+          
+          // Create a File object from the blob
+          const file = new File([blob], 'texture.png', { type: blob.type })
+          
+          // Generate a temporary design ID for the upload path
+          const tempDesignId = crypto.randomUUID()
+          
+          // Upload to Supabase storage
+          textureUrl = await uploadTexture(file, tempDesignId)
+        } catch (uploadError) {
+          console.error('Error uploading texture:', uploadError)
+          throw new Error('Failed to upload texture. Please try again.')
+        }
+      }
+
       // Prepare design data
       const designData = {
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         authorName: formData.authorName.trim(),
         authorEmail: formData.authorEmail.trim() || null,
-        textureUrl: activeLayer.textureUrl,
+        textureUrl: textureUrl,
         textureTransform: activeLayer.textureTransform,
         selectedKeys: selectedKeys,
         keyGroup: selectedKeys,

@@ -1,19 +1,23 @@
 import { useRef, useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { fetchGalleryDesigns } from '../services/supabase'
+import { fetchGalleryDesigns, incrementCopyCount } from '../services/supabase'
 import DesignCard from '../components/gallery/DesignCard'
+import ViewDetailsModal from '../components/gallery/ViewDetailsModal'
+import useConfiguratorStore from '../store/configuratorStore'
 
 gsap.registerPlugin(ScrollTrigger)
 
 export default function GalleryPage() {
   const pageRef = useRef(null)
+  const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [designs, setDesigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [selectedDesign, setSelectedDesign] = useState(null)
 
   // Fetch designs from Supabase
   useEffect(() => {
@@ -50,6 +54,54 @@ export default function GalleryPage() {
     : selectedCategory === 'most-liked'
     ? [...designs].sort((a, b) => b.likes_count - a.likes_count)
     : designs
+
+  const handleViewDetails = (design) => {
+    setSelectedDesign(design)
+  }
+
+  const handleCopyToConfigurator = async (design) => {
+    try {
+      // Increment copy count
+      await incrementCopyCount(design.id)
+      
+      // Load design into configurator
+      const configuratorStore = useConfiguratorStore.getState()
+      
+      // Upload texture to active layer
+      if (design.texture_url) {
+        const response = await fetch(design.texture_url)
+        const blob = await response.blob()
+        const file = new File([blob], 'texture.png', { type: blob.type })
+        
+        configuratorStore.uploadTexture(configuratorStore.activeLayerId, file)
+      }
+      
+      // Set texture transform
+      if (design.texture_config) {
+        configuratorStore.updateTextureTransform(
+          configuratorStore.activeLayerId,
+          design.texture_config
+        )
+      }
+      
+      // Set base color
+      if (design.base_color) {
+        configuratorStore.updateBaseColor(configuratorStore.activeLayerId, design.base_color)
+      }
+      
+      // Set selected keys
+      if (design.selected_keys && design.selected_keys.length > 0) {
+        configuratorStore.setSelectedKeys(design.selected_keys)
+      }
+      
+      // Close modal and navigate
+      setSelectedDesign(null)
+      navigate('/configurator')
+    } catch (error) {
+      console.error('Error copying to configurator:', error)
+      alert('Failed to copy design. Please try again.')
+    }
+  }
 
   // Add your custom animations here
 
@@ -110,7 +162,7 @@ export default function GalleryPage() {
             <div className="text-center py-20">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-red-500/10 rounded-full mb-4">
                 <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <p className="text-red-400 text-xl mb-2">Failed to load designs</p>
@@ -129,7 +181,11 @@ export default function GalleryPage() {
             <>
               <div className="gallery-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredDesigns.map((design) => (
-                  <DesignCard key={design.id} design={design} />
+                  <DesignCard 
+                    key={design.id} 
+                    design={design} 
+                    onViewDetails={handleViewDetails}
+                  />
                 ))}
               </div>
 
@@ -166,6 +222,15 @@ export default function GalleryPage() {
           </Link>
         </div>
       </section>
+
+      {/* View Details Modal */}
+      {selectedDesign && (
+        <ViewDetailsModal
+          design={selectedDesign}
+          onClose={() => setSelectedDesign(null)}
+          onCopyToConfigurator={() => handleCopyToConfigurator(selectedDesign)}
+        />
+      )}
     </div>
   )
 }

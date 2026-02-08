@@ -79,12 +79,12 @@ export async function saveDesign(designData) {
     .from('user_designs')
     .insert([
       {
-        title,
+        name: title,
         description,
         author_name: authorName,
         author_email: authorEmail,
         texture_url: textureUrl,
-        texture_settings: textureTransform,
+        texture_config: textureTransform,
         selected_keys: selectedKeys,
         key_group: keyGroup,
         base_color: baseColor,
@@ -185,7 +185,7 @@ export async function fetchGalleryDesigns({
   let query = supabase
     .from('user_designs')
     .select('*')
-    .in('visibility', ['public', 'featured'])
+    .eq('is_public', true)
 
   // Apply category filter
   if (category && category !== 'all') {
@@ -230,7 +230,7 @@ export async function fetchGalleryDesigns({
  */
 export async function likeDesign(designId) {
   const { data, error } = await supabase.rpc('increment_likes', {
-    design_id: designId
+    design_id_param: designId
   })
 
   if (error) {
@@ -248,7 +248,7 @@ export async function likeDesign(designId) {
  */
 export async function incrementCopyCount(designId) {
   const { data, error } = await supabase.rpc('increment_copies', {
-    design_id: designId
+    design_id_param: designId
   })
 
   if (error) {
