@@ -59,8 +59,27 @@ export default function GalleryPage() {
     setSelectedDesign(design)
   }
 
+  const handleLikeUpdate = async (designId) => {
+    // Refresh the designs list to get updated like count
+    try {
+      const data = await fetchGalleryDesigns({
+        limit: 50,
+        sortBy: 'created_at'
+      })
+      setDesigns(data || [])
+    } catch (err) {
+      console.error('Error refreshing designs:', err)
+    }
+  }
+
   const handleCopyToConfigurator = async (design) => {
     try {
+      // Check if texture URL exists and is valid
+      if (!design.texture_url || design.texture_url.startsWith('blob:')) {
+        alert('This design has a missing or invalid texture. Please create a new design with a valid texture.')
+        return
+      }
+
       // Increment copy count
       await incrementCopyCount(design.id)
       
@@ -68,12 +87,18 @@ export default function GalleryPage() {
       const configuratorStore = useConfiguratorStore.getState()
       
       // Upload texture to active layer
-      if (design.texture_url) {
+      try {
         const response = await fetch(design.texture_url)
+        if (!response.ok) throw new Error('Failed to fetch texture')
+        
         const blob = await response.blob()
         const file = new File([blob], 'texture.png', { type: blob.type })
         
         configuratorStore.uploadTexture(configuratorStore.activeLayerId, file)
+      } catch (fetchError) {
+        console.error('Error fetching texture:', fetchError)
+        alert('Failed to load texture. The image may be unavailable.')
+        return
       }
       
       // Set texture transform
@@ -229,6 +254,7 @@ export default function GalleryPage() {
           design={selectedDesign}
           onClose={() => setSelectedDesign(null)}
           onCopyToConfigurator={() => handleCopyToConfigurator(selectedDesign)}
+          onLikeUpdate={handleLikeUpdate}
         />
       )}
     </div>

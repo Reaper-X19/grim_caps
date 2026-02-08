@@ -1,12 +1,12 @@
+```
 import { X, Heart, Copy, ShoppingCart, User, Calendar } from 'lucide-react'
 import { formatPrice } from '../../utils/pricing'
 import { useState } from 'react'
 import { likeDesign } from '../../services/supabase'
 import useCartStore from '../../store/cartStore'
 
-export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator }) {
+export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator, onLikeUpdate }) {
   const [liked, setLiked] = useState(false)
-  const [likesCount, setLikesCount] = useState(design.likes_count || 0)
   const addDesign = useCartStore(state => state.addDesign)
   const isInCart = useCartStore(state => state.isInCart(design.id))
 
@@ -16,7 +16,10 @@ export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator
     try {
       await likeDesign(design.id)
       setLiked(true)
-      setLikesCount(prev => prev + 1)
+      // Notify parent to update the design in the list
+      if (onLikeUpdate) {
+        onLikeUpdate(design.id)
+      }
     } catch (error) {
       console.error('Error liking design:', error)
     }
@@ -103,7 +106,7 @@ export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator
                   <div className="text-sm text-gray-400">Keys</div>
                 </div>
                 <div className="glass p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-grim-accent">{likesCount}</div>
+                  <div className="text-2xl font-bold text-grim-accent">{design.likes_count || 0}</div>
                   <div className="text-sm text-gray-400">Likes</div>
                 </div>
                 <div className="glass p-4 rounded-lg">
