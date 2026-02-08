@@ -110,8 +110,8 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'signin' }) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="glass rounded-2xl w-full max-w-md shadow-2xl border border-gray-700/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto">
+      <div className="glass rounded-2xl w-full max-w-md shadow-2xl border border-gray-700/50 pointer-events-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <h2 className="text-2xl font-display font-bold text-grim-accent">
