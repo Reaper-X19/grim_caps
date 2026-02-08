@@ -23,33 +23,8 @@
       background-position: 0% 50%;
     }
   }
-  
-  /* Prevent flash of unstyled content - set initial states */
-  .hero-title-line-1,
-  .hero-title-line-2,
-  .hero-subtitle,
-  .hero-cta-btn,
-  .scroll-indicator,
-  .section-heading,
-  .feature-card,
-  .feature-icon,
-  .value-card,
-  .gallery-item,
-  .category-btn,
-  .info-card,
-  .about-hero-title,
-  .about-hero-subtitle,
-  .story-content,
-  .team-content,
-  .gallery-hero-title,
-  .gallery-hero-subtitle,
-  .contact-hero-title,
-  .contact-hero-subtitle,
-  .contact-form,
-  .cta-content {
-    opacity: 0;
-  }
 }
+
 
 @layer utilities {
   .text-glow {

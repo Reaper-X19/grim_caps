@@ -1,5 +1,5 @@
 // Key preset definitions for quick selection
-// Complete 82-key layout based on user's keyboard
+// Complete keyboard layout with all keys properly mapped
 export const KEY_PRESETS = {
   // Row 1 (Function Row): 13 keys
   row1: [
@@ -7,33 +7,33 @@ export const KEY_PRESETS = {
     'K_F7', 'K_F8', 'K_F9', 'K_F10', 'K_F11', 'K_F12'
   ],
   
-  // Row 2 (Number Row): 15 keys
+  // Row 2 (Number Row): 16 keys (added K_DEL)
   row2: [
     'K_GRAVE', 'K_1', 'K_2', 'K_3', 'K_4', 'K_5', 'K_6', 'K_7', 
-    'K_8', 'K_9', 'K_0', 'K_DASH', 'K_EQUAL', 'K_BACKSPACE', 'K_HOME'
+    'K_8', 'K_9', 'K_0', 'K_DASH', 'K_EQUAL', 'K_BACKSPACE', 'K_DEL', 'K_HOME'
   ],
   
-  // Row 3 (QWERTY): 15 keys
+  // Row 3 (QWERTY): 15 keys (added K_LSQUAREBRACKET, K_RSQUAREBRACKET, K_PAGEUP)
   row3: [
     'K_TAB', 'K_Q', 'K_W', 'K_E', 'K_R', 'K_T', 'K_Y', 'K_U', 
-    'K_I', 'K_O', 'K_P', 'K_LBRACKET', 'K_RBRACKET', 'K_BACKSLASH', 'K_END'
+    'K_I', 'K_O', 'K_P', 'K_LSQUAREBRACKET', 'K_RSQUAREBRACKET', 'K_BACKSLASH', 'K_PAGEUP'
   ],
   
-  // Row 4 (ASDF / Home Row): 14 keys
+  // Row 4 (ASDF / Home Row): 14 keys (added K_PAGEDOWN, removed extras)
   row4: [
     'K_CAPS', 'K_A', 'K_S', 'K_D', 'K_F', 'K_G', 'K_H', 'K_J', 
-    'K_K', 'K_L', 'K_SEMICOLON', 'K_QUOTE', 'K_ENTER', 'K_PAGEUP'
+    'K_K', 'K_L', 'K_SEMICOLON', 'K_QUOTE', 'K_ENTER', 'K_PAGEDOWN'
   ],
   
-  // Row 5 (ZXCV): 14 keys
+  // Row 5 (ZXCV): 14 keys (added K_END)
   row5: [
     'K_LSHIFT', 'K_Z', 'K_X', 'K_C', 'K_V', 'K_B', 'K_N', 'K_M', 
-    'K_COMMA', 'K_PERIOD', 'K_SLASH', 'K_RSHIFT', 'K_ARROWUP', 'K_PAGEDOWN'
+    'K_COMMA', 'K_PERIOD', 'K_SLASH', 'K_RSHIFT', 'K_ARROWUP', 'K_END'
   ],
   
-  // Row 6 (Bottom Row): 11 keys
+  // Row 6 (Bottom Row): 12 keys (added K_LALT, K_LWIN, K_RALT)
   row6: [
-    'K_LCONTROL', 'K_OPT', 'K_LCMD', 'K_SPACE', 'K_RCMD', 'K_FN', 
+    'K_LCONTROL', 'K_LWIN', 'K_LALT', 'K_SPACE', 'K_RALT', 'K_FN', 
     'K_ARROWLEFT', 'K_ARROWDOWN', 'K_ARROWRIGHT'
   ],
   
@@ -50,12 +50,6 @@ export const KEY_PRESETS = {
   
   // Number row (just the numbers)
   numbers: ['K_1', 'K_2', 'K_3', 'K_4', 'K_5', 'K_6', 'K_7', 'K_8', 'K_9', 'K_0'],
-  
-  // Modifier keys
-  modifiers: [
-    'K_LSHIFT', 'K_RSHIFT', 'K_LCONTROL', 'K_OPT', 'K_LCMD', 'K_RCMD',
-    'K_FN', 'K_CAPS', 'K_TAB', 'K_ENTER', 'K_BACKSPACE'
-  ],
   
   // Home row (touch typing) - middle keys of Row 4
   homeRow: ['K_A', 'K_S', 'K_D', 'K_F', 'K_G', 'K_H', 'K_J', 'K_K', 'K_L'],
@@ -89,11 +83,12 @@ export const formatKeyName = (keyName) => {
     'LSHIFT': 'L Shift',
     'RSHIFT': 'R Shift',
     'LCONTROL': 'L Ctrl',
-    'OPT': 'Opt',
-    'LCMD': 'L Cmd',
-    'RCMD': 'R Cmd',
+    'LALT': 'L Alt',
+    'RALT': 'R Alt',
+    'LWIN': 'L Win',
     'FN': 'Fn',
     'ESC': 'Esc',
+    'DEL': 'Del',
     'HOME': 'Home',
     'END': 'End',
     'PAGEUP': 'PgUp',
@@ -101,8 +96,8 @@ export const formatKeyName = (keyName) => {
     'GRAVE': '`',
     'DASH': '-',
     'EQUAL': '=',
-    'LBRACKET': '[',
-    'RBRACKET': ']',
+    'LSQUAREBRACKET': '[',
+    'RSQUAREBRACKET': ']',
     'BACKSLASH': '\\',
     'SEMICOLON': ';',
     'QUOTE': "'",
@@ -143,7 +138,6 @@ export const getPresetDisplayName = (presetKey) => {
     wasd: 'WASD',
     arrows: 'Arrow Keys',
     numbers: 'Numbers',
-    modifiers: 'Modifiers',
     homeRow: 'Home Row',
     alpha: 'All Letters',
   }

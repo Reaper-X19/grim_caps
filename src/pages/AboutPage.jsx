@@ -9,66 +9,7 @@ gsap.registerPlugin(ScrollTrigger)
 export default function AboutPage() {
   const pageRef = useRef(null)
 
-  useGSAP(() => {
-    // Hero entrance - use timeline for better control
-    const heroTl = gsap.timeline({
-      defaults: { ease: 'power3.out' }
-    })
-
-    heroTl
-      .to('.about-hero-title', {
-        y: 0,
-        opacity: 1,
-        duration: 1,
-        ease: 'power4.out'
-      })
-      .to('.about-hero-subtitle', {
-        y: 0,
-        opacity: 1,
-        duration: 0.8
-      }, '-=0.5')
-
-    // Story section
-    gsap.to('.story-content', {
-      scrollTrigger: {
-        trigger: '.story-section',
-        start: 'top 85%',
-        toggleActions: 'play none none reverse'
-      },
-      y: 0,
-      opacity: 1,
-      duration: 0.8,
-      ease: 'power3.out'
-    })
-
-    // Values cards
-    gsap.to('.value-card', {
-      scrollTrigger: {
-        trigger: '.values-section',
-        start: 'top 85%',
-        toggleActions: 'play none none reverse'
-      },
-      y: 0,
-      opacity: 1,
-      rotateX: 0,
-      duration: 0.8,
-      stagger: 0.2,
-      ease: 'power3.out'
-    })
-
-    // Team section
-    gsap.to('.team-content', {
-      scrollTrigger: {
-        trigger: '.team-section',
-        start: 'top 85%',
-        toggleActions: 'play none none reverse'
-      },
-      scale: 1,
-      opacity: 1,
-      duration: 0.8,
-      ease: 'power3.out'
-    })
-  }, { scope: pageRef })
+  // Add your custom animations here
 
   return (
     <div ref={pageRef} className="overflow-hidden">

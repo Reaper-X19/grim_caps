@@ -17,6 +17,7 @@ export default function KeyboardModel() {
   // Store for material references and textures
   const materialsRef = useRef(new Map())
   const texturesRef = useRef(new Map())
+  const originalMaterialsRef = useRef(new Map()) // Store original materials from GLTF
   
   // Get state from store
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
@@ -89,6 +90,11 @@ export default function KeyboardModel() {
     groupRef.current.traverse((child) => {
       if (child.isMesh && child.name && child.name.startsWith('K_')) {
         const keyName = child.name
+        
+        // Store original material on first encounter
+        if (!originalMaterialsRef.current.has(keyName)) {
+          originalMaterialsRef.current.set(keyName, child.material.clone())
+        }
         
         // Check if key is selected
         const isSelected = selectedKeys.includes(keyName)
@@ -187,20 +193,41 @@ export default function KeyboardModel() {
             })
           }
         } else {
-          // No customization or selection - use original material
-          if (!child.material.userData.isOriginal) {
-            // Clone original material if not already done
-            child.material = child.material.clone()
-            child.material.userData.isOriginal = true
+          // No customization or selection - restore original material
+          // CRITICAL: Restore original material to preserve keycap colors
+          
+          if (child.material.isShaderMaterial) {
+            // If currently using shader material, restore original
+            const originalMaterial = originalMaterialsRef.current.get(keyName)
+            if (originalMaterial) {
+              child.material = originalMaterial.clone()
+              // Clear any shader material reference
+              materialsRef.current.delete(keyName)
+            }
           }
           
-          // Apply selection highlight to original material
+          // Apply selection highlight if key is selected
           if (isSelected) {
+            // Ensure we have a cloned material to modify
+            if (!child.material.userData.isModified) {
+              child.material = child.material.clone()
+              child.material.userData.isModified = true
+            }
             child.material.emissive = new THREE.Color('#00ffcc')
             child.material.emissiveIntensity = 0.3
           } else {
-            child.material.emissive = new THREE.Color('#000000')
-            child.material.emissiveIntensity = 0
+            // Not selected - ensure emissive is cleared
+            if (child.material.userData.isModified) {
+              // Restore completely original material
+              const originalMaterial = originalMaterialsRef.current.get(keyName)
+              if (originalMaterial) {
+                child.material = originalMaterial.clone()
+              }
+            } else {
+              // Just ensure emissive is off
+              child.material.emissive = new THREE.Color('#000000')
+              child.material.emissiveIntensity = 0
+            }
           }
         }
         

@@ -4,141 +4,28 @@ import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Canvas } from '@react-three/fiber'
-import { PerspectiveCamera, Environment, useGLTF } from '@react-three/drei'
+import { PerspectiveCamera, Environment } from '@react-three/drei'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { useControls } from 'leva'
-
-
-
-
+import * as THREE from 'three'
+import GlossyKeyboardHero from '../components/3d/GlossyKeyboardHero'
 
 gsap.registerPlugin(ScrollTrigger)
-
-// Keyboard 3D Model Component
-function KeyboardModel({ groupRef }) {
-  const { scene } = useGLTF('/models/Keyboard_60percent.gltf')
-  
-  // Leva controls for position and rotation
-  const { position, rotation, scale } = useControls('Keyboard Transform', {
-    position: {
-      value: [0, 0, 0],
-      step: 0.1,
-      label: 'Position (X, Y, Z)'
-    },
-    rotation: {
-      value: [0, 0, 0],
-      step: 0.01,
-      label: 'Rotation (X, Y, Z)'
-    },
-    scale: {
-      value: 2.5,
-      min: 0.5,
-      max: 5,
-      step: 0.1,
-      label: 'Scale'
-    }
-  })
-
-  return (
-    <group ref={groupRef}>
-      <primitive 
-        object={scene} 
-        scale={scale} 
-        position={position}
-        rotation={rotation}
-      />
-    </group>
-  )
-}
-
 
 export default function HomePage() {
   const heroRef = useRef(null)
   const featuresRef = useRef(null)
   const ctaRef = useRef(null)
-  const keyboardGroupRef = useRef(null)
+  
+  // Bloom controls
+  const { bloomIntensity, bloomThreshold, bloomSmoothing } = useControls('Bloom Effect', {
+    bloomIntensity: { value: 1.5, min: 0, max: 3, step: 0.1 },
+    bloomThreshold: { value: 0.9, min: 0, max: 1, step: 0.05 },
+    bloomSmoothing: { value: 0.9, min: 0, max: 1, step: 0.05 }
+  })
 
-  useGSAP(() => {
-    // Set initial states and animate
-    const heroTl = gsap.timeline({
-      defaults: { ease: 'power3.out' }
-    })
+  // Add your custom animations here using useGSAP or useEffect
 
-    heroTl
-      .to('.hero-title-line-1', {
-        y: 0,
-        opacity: 1,
-        duration: 1,
-        ease: 'power4.out'
-      })
-      .to('.hero-subtitle', {
-        y: 0,
-        opacity: 1,
-        duration: 0.8
-      }, '-=0.5')
-      .to('.hero-cta-btn', {
-        y: 0,
-        opacity: 1,
-        duration: 0.6
-      }, '-=0.4')
-      .to('.scroll-indicator', {
-        opacity: 1,
-        y: 0,
-        duration: 0.6
-      }, '-=0.3')
-
-    // Feature cards
-    gsap.to('.feature-card', {
-      scrollTrigger: {
-        trigger: featuresRef.current,
-        start: 'top 80%',
-        toggleActions: 'play none none reverse'
-      },
-      y: 0,
-      opacity: 1,
-      rotateX: 0,
-      duration: 0.8,
-      stagger: 0.2,
-      ease: 'power3.out'
-    })
-
-    // Feature icons
-    gsap.to('.feature-icon', {
-      scrollTrigger: {
-        trigger: featuresRef.current,
-        start: 'top 80%',
-      },
-      scale: 1,
-      rotation: 0,
-      duration: 0.8,
-      ease: 'back.out(1.7)',
-      stagger: 0.2
-    })
-
-    // Section heading
-    gsap.to('.section-heading', {
-      scrollTrigger: {
-        trigger: featuresRef.current,
-        start: 'top 85%',
-      },
-      y: 0,
-      opacity: 1,
-      duration: 0.8,
-      ease: 'power3.out'
-    })
-
-    // CTA section
-    gsap.to('.cta-content', {
-      scrollTrigger: {
-        trigger: ctaRef.current,
-        start: 'top 85%',
-      },
-      scale: 1,
-      opacity: 1,
-      duration: 1,
-      ease: 'power3.out'
-    })
-
-  }, { scope: heroRef })
 
   return (
     <div ref={heroRef} className="overflow-hidden">
@@ -182,18 +69,63 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Full Screen 3D Canvas */}
+        {/* Full Screen 3D Canvas with Glossy Keyboard */}
         <div className="absolute inset-0 w-full h-full">
           <Canvas
             className="w-full h-full"
-            gl={{ antialias: true, alpha: true }}
+            gl={{ 
+              antialias: true, 
+              alpha: true,
+              toneMapping: THREE.ACESFilmicToneMapping,
+              toneMappingExposure: 1.2
+            }}
             dpr={[1, 2]}
           >
             <PerspectiveCamera makeDefault position={[0, 0, 4]} fov={45} />
-            <Environment files="/hdr/blue-studio.hdr" />
-            <ambientLight intensity={0.5} />
-            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} />
-            <KeyboardModel groupRef={keyboardGroupRef} />
+            
+            {/* HDR Environment - REDUCED for spooky atmosphere */}
+            <Environment 
+              files="/hdr/blue-studio.hdr"
+              background={false}
+              environmentIntensity={0.5}
+            />
+            
+            {/* REDUCED Lighting - Dark spooky atmosphere to highlight emission */}
+            <ambientLight intensity={0.4} />
+            
+            {/* Hemisphere light for natural ambient lighting - DIMMED */}
+            <hemisphereLight 
+              skyColor="#ffffff" 
+              groundColor="#666666" 
+              intensity={0.3} 
+            />
+            
+            {/* Main key light - REDUCED */}
+            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={0.8} castShadow={false} />
+            
+            {/* Fill lights from ALL angles - REDUCED for spooky effect */}
+            <pointLight position={[-10, 5, -10]} intensity={0.4} color="#00ffcc" />
+            <pointLight position={[10, -5, 10]} intensity={0.3} color="#ffffff" />
+            <pointLight position={[0, 10, 0]} intensity={0.3} color="#ffffff" />
+            <pointLight position={[0, -10, 0]} intensity={0.2} color="#ffffff" />
+            <pointLight position={[-10, 0, 10]} intensity={0.2} color="#ffffff" />
+            <pointLight position={[10, 0, -10]} intensity={0.2} color="#ffffff" />
+            
+            {/* Rim lights for edge definition - SUBTLE */}
+            <directionalLight position={[0, 0, -10]} intensity={0.2} color="#00ffcc" />
+            <directionalLight position={[0, 0, 10]} intensity={0.2} color="#ffffff" />
+            
+            {/* Glossy Keyboard with Emissions */}
+            <GlossyKeyboardHero />
+            
+            {/* Post-Processing: Bloom for glowing emissions */}
+            <EffectComposer>
+              <Bloom
+                intensity={bloomIntensity}
+                luminanceThreshold={bloomThreshold}
+                luminanceSmoothing={bloomSmoothing}
+              />
+            </EffectComposer>
           </Canvas>
         </div>
 

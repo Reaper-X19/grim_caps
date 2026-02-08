@@ -84,7 +84,7 @@ export default function KeySelectionPanel() {
   
   // Primary presets to show by default
   const primaryPresets = ['wasd', 'arrows', 'numbers', 'row2', 'row3', 'row4']
-  const secondaryPresets = ['row1', 'row5', 'row6', 'function', 'modifiers', 'homeRow', 'alpha']
+  const secondaryPresets = ['row1', 'row5', 'row6', 'function', 'homeRow', 'alpha']
   
   return (
     <div className="space-y-4">

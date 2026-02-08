@@ -17,22 +17,22 @@ export default function KeyboardScene() {
         {/* Camera - positioned for optimal keyboard view */}
         <PerspectiveCamera makeDefault position={[0, 8, 12]} fov={45} />
         
-        {/* Lighting Setup - Improved for clarity */}
+        {/* Lighting Setup */}
         <ambientLight intensity={0.8} />
         
-        {/* Key Light - main illumination (no shadows to avoid stripes) */}
+        {/* Key Light - main illumination */}
         <directionalLight
           position={[10, 10, 5]}
           intensity={2.5}
         />
         
-        {/* Fill Light - soften shadows and illuminate from opposite side */}
+        {/* Fill Light - soften shadows */}
         <directionalLight
           position={[-5, 8, -5]}
           intensity={1.2}
         />
         
-        {/* Top Light - illuminate from above for better key visibility */}
+        {/* Top Light - illuminate from above */}
         <directionalLight
           position={[0, 15, 0]}
           intensity={1}
@@ -46,7 +46,7 @@ export default function KeyboardScene() {
           <KeyboardModel />
         </Suspense>
         
-        {/* Contact Shadows for subtle depth (reduced opacity to avoid artifacts) */}
+        {/* Contact Shadows for subtle depth */}
         <ContactShadows
           position={[0, -1, 0]}
           opacity={0.25}
@@ -65,10 +65,11 @@ export default function KeyboardScene() {
           target={[0, 0, 0]}
         />
         
-        {/* HDR Environment for cinematic lighting */}
+        {/* HDR Environment */}
         <Environment
           files="/hdr/studio-small.hdr"
           background={false}
+          environmentIntensity={1.0}
         />
       </Canvas>
     </div>

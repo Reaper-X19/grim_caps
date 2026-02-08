@@ -15,52 +15,7 @@ export default function ContactPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useGSAP(() => {
-    // Hero entrance - use timeline
-    const heroTl = gsap.timeline({
-      defaults: { ease: 'power3.out' }
-    })
-
-    heroTl
-      .to('.contact-hero-title', {
-        y: 0,
-        opacity: 1,
-        duration: 1,
-        ease: 'power4.out'
-      })
-      .to('.contact-hero-subtitle', {
-        y: 0,
-        opacity: 1,
-        duration: 0.8
-      }, '-=0.5')
-
-    // Info cards
-    gsap.to('.info-card', {
-      scrollTrigger: {
-        trigger: '.info-section',
-        start: 'top 85%',
-        toggleActions: 'play none none reverse'
-      },
-      y: 0,
-      opacity: 1,
-      stagger: 0.2,
-      duration: 0.6,
-      ease: 'power3.out'
-    })
-
-    // Form entrance
-    gsap.to('.contact-form', {
-      scrollTrigger: {
-        trigger: '.form-section',
-        start: 'top 85%',
-        toggleActions: 'play none none reverse'
-      },
-      y: 0,
-      opacity: 1,
-      duration: 0.8,
-      ease: 'power3.out'
-    })
-  }, { scope: pageRef })
+  // Add your custom animations here
 
   const handleSubmit = (e) => {
     e.preventDefault()

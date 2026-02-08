@@ -27,54 +27,7 @@ export default function GalleryPage() {
     ? galleryItems 
     : galleryItems.filter(item => item.category === selectedCategory)
 
-  useGSAP(() => {
-    // Hero entrance - use timeline
-    const heroTl = gsap.timeline({
-      defaults: { ease: 'power3.out' }
-    })
-
-    heroTl
-      .to('.gallery-hero-title', {
-        y: 0,
-        opacity: 1,
-        duration: 1,
-        ease: 'power4.out'
-      })
-      .to('.gallery-hero-subtitle', {
-        y: 0,
-        opacity: 1,
-        duration: 0.8
-      }, '-=0.5')
-
-    // Category filters
-    gsap.to('.category-btn', {
-      scrollTrigger: {
-        trigger: '.filters-section',
-        start: 'top 85%',
-        toggleActions: 'play none none reverse'
-      },
-      y: 0,
-      opacity: 1,
-      duration: 0.6,
-      stagger: 0.1,
-      ease: 'power3.out'
-    })
-
-    // Gallery items - re-animate when filtered items change
-    gsap.to('.gallery-item', {
-      scrollTrigger: {
-        trigger: '.gallery-grid',
-        start: 'top 85%',
-        toggleActions: 'play none none reverse'
-      },
-      y: 0,
-      opacity: 1,
-      scale: 1,
-      duration: 0.6,
-      stagger: 0.1,
-      ease: 'power3.out'
-    })
-  }, { scope: pageRef, dependencies: [filteredItems] })
+  // Add your custom animations here
 
   return (
     <div ref={pageRef} className="overflow-hidden">

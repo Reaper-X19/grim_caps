@@ -21,7 +21,6 @@ const useConfiguratorStore = create((set, get) => ({
   ],
   
   activeLayerId: 'layer-1',
-  viewMode: 'realistic',
   
   // Key selection state (global, not per-layer)
   selectedKeys: [],
@@ -250,9 +249,9 @@ const useConfiguratorStore = create((set, get) => ({
     
     return {
       keyCustomizations: newCustomizations,
-      selectedKeys: [], // Clear selection after applying
-      selectionLocked: false, // Unlock after applying
-      selectionMode: false // Exit selection mode
+      selectedKeys: selectedKeysList, // Keep selection so user can edit it
+      selectionLocked: true, // Lock selection after applying
+      selectionMode: false // Exit selection mode (shows "Edit Selection" button)
     }
   }),
   
