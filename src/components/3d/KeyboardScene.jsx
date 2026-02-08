@@ -14,8 +14,8 @@ export default function KeyboardScene() {
         }}
         dpr={[1, 2]}
       >
-        {/* Camera - positioned for optimal keyboard view */}
-        <PerspectiveCamera makeDefault position={[0, 8, 12]} fov={45} />
+        {/* Camera - positioned for optimal keyboard view - ZOOMED CLOSER */}
+        <PerspectiveCamera makeDefault position={[0, 6, 8]} fov={50} />
         
         {/* Lighting Setup */}
         <ambientLight intensity={0.8} />
@@ -55,12 +55,12 @@ export default function KeyboardScene() {
           far={4}
         />
         
-        {/* Controls */}
+        {/* Controls - ZOOMED CLOSER */}
         <OrbitControls
           enableDamping
           dampingFactor={0.05}
-          minDistance={8}
-          maxDistance={25}
+          minDistance={5}
+          maxDistance={20}
           maxPolarAngle={Math.PI / 2}
           target={[0, 0, 0]}
         />

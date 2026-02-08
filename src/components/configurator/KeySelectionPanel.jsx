@@ -214,7 +214,7 @@ export default function KeySelectionPanel() {
       )}
       
       {/* Actions */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <p className="text-xs text-gray-500 uppercase tracking-wide">Actions</p>
         
         <button
@@ -228,24 +228,24 @@ export default function KeySelectionPanel() {
         <button
           onClick={clearSelectedKeys}
           disabled={selectedKeys.length === 0}
-          className="w-full px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 font-medium rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 font-medium rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Clear Customization
         </button>
         
         {/* Copy/Paste */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 pt-1">
           <button
             onClick={copyStyle}
             disabled={selectedKeys.length === 0}
-            className="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 font-medium rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-2.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 font-medium rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Copy Style
           </button>
           <button
             onClick={pasteStyle}
             disabled={!copiedStyle || selectedKeys.length === 0 || hasConflicts}
-            className="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 font-medium rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-2.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 font-medium rounded-lg text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Paste Style
           </button>
@@ -256,7 +256,7 @@ export default function KeySelectionPanel() {
       {selectedKeys.length > 0 && (
         <div className="p-3 bg-grim-dark/50 rounded-lg border border-grim-accent/10">
           <p className="text-xs text-gray-500 mb-2">Selected Keys:</p>
-          <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
             {selectedKeys.map(keyName => {
               const isConflict = keyCustomizations[keyName]?.layerId && 
                                 keyCustomizations[keyName].layerId !== activeLayerId
@@ -280,7 +280,7 @@ export default function KeySelectionPanel() {
       
       {/* Copy Status */}
       {copiedStyle && (
-        <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded text-xs text-blue-400">
+        <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded text-xs text-blue-400">
           ✓ Style copied - ready to paste
         </div>
       )}

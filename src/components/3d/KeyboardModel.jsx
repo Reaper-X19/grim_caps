@@ -172,8 +172,9 @@ export default function KeyboardModel() {
               zoom: transforms.zoom,
               offset: new THREE.Vector2(transforms.positionX, transforms.positionY),
               rotation: transforms.rotation * Math.PI / 180,
-              emissive: isSelected ? new THREE.Color('#00ffcc') : new THREE.Color('#000000'),
-              emissiveIntensity: isSelected ? 0.3 : 0,
+              // ONLY show highlight during active selection mode (not when locked after applying)
+              emissive: (isSelected && selectionMode && !selectionLocked) ? new THREE.Color('#00ffcc') : new THREE.Color('#000000'),
+              emissiveIntensity: (isSelected && selectionMode && !selectionLocked) ? 0.3 : 0,
             })
             
             child.material = material
@@ -188,8 +189,9 @@ export default function KeyboardModel() {
               zoom: transforms.zoom,
               offset: new THREE.Vector2(transforms.positionX, transforms.positionY),
               rotation: transforms.rotation * Math.PI / 180,
-              emissive: isSelected ? new THREE.Color('#00ffcc') : new THREE.Color('#000000'),
-              emissiveIntensity: isSelected ? 0.3 : 0,
+              // ONLY show highlight during active selection mode (not when locked after applying)
+              emissive: (isSelected && selectionMode && !selectionLocked) ? new THREE.Color('#00ffcc') : new THREE.Color('#000000'),
+              emissiveIntensity: (isSelected && selectionMode && !selectionLocked) ? 0.3 : 0,
             })
           }
         } else {
@@ -206,8 +208,8 @@ export default function KeyboardModel() {
             }
           }
           
-          // Apply selection highlight if key is selected
-          if (isSelected) {
+          // Apply selection highlight ONLY if in active selection mode (not locked)
+          if (isSelected && selectionMode && !selectionLocked) {
             // Ensure we have a cloned material to modify
             if (!child.material.userData.isModified) {
               child.material = child.material.clone()
@@ -216,7 +218,7 @@ export default function KeyboardModel() {
             child.material.emissive = new THREE.Color('#00ffcc')
             child.material.emissiveIntensity = 0.3
           } else {
-            // Not selected - ensure emissive is cleared
+            // Not in active selection - ensure emissive is cleared
             if (child.material.userData.isModified) {
               // Restore completely original material
               const originalMaterial = originalMaterialsRef.current.get(keyName)
@@ -244,7 +246,9 @@ export default function KeyboardModel() {
     activeLayer?.baseColor, 
     activeLayer?.textureUrl,
     activeLayer?.textureTransform,
-    activeTexture
+    activeTexture,
+    selectionMode,
+    selectionLocked
   ])
   
   return (

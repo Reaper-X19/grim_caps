@@ -1,12 +1,15 @@
 import { Suspense, useState } from 'react'
+import { Save } from 'lucide-react'
 import KeyboardScene from '../components/3d/KeyboardScene'
 import LayerPanel from '../components/configurator/LayerPanel'
 import ControlPanel from '../components/configurator/ControlPanel'
 import KeySelectionPanel from '../components/configurator/KeySelectionPanel'
+import SaveDesignModal from '../components/configurator/SaveDesignModal'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 export default function ConfiguratorPage() {
   const [activeTab, setActiveTab] = useState('customize')
+  const [showSaveModal, setShowSaveModal] = useState(false)
   
   return (
     <div className="fixed inset-0" style={{
@@ -44,27 +47,27 @@ export default function ConfiguratorPage() {
       </div>
 
       {/* Floating Right Panel - Controls with Tabs */}
-      <div className="absolute right-6 top-24 bottom-6 w-80 pointer-events-none">
+      <div className="absolute right-6 top-24 bottom-6 w-80 pointer-events-none z-10">
         <div className="h-full flex flex-col pointer-events-auto">
-          <div className="glass rounded-xl shadow-2xl max-h-full overflow-hidden flex flex-col">
-            {/* Tab Navigation */}
-            <div className="flex border-b border-gray-700/50 bg-grim-darker/30">
+          <div className="glass p-6 rounded-xl shadow-2xl max-h-full overflow-y-auto flex flex-col">
+            {/* Tab Headers */}
+            <div className="flex gap-2 mb-6 border-b border-gray-700/50 pb-2">
               <button
                 onClick={() => setActiveTab('customize')}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
+                className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
                   activeTab === 'customize'
-                    ? 'text-grim-accent border-b-2 border-grim-accent bg-grim-dark/30'
-                    : 'text-gray-400 hover:text-gray-300 hover:bg-grim-dark/20'
+                    ? 'bg-grim-accent text-black'
+                    : 'bg-grim-dark/50 text-gray-400 hover:text-gray-200'
                 }`}
               >
                 Customize
               </button>
               <button
                 onClick={() => setActiveTab('select')}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
+                className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
                   activeTab === 'select'
-                    ? 'text-grim-accent border-b-2 border-grim-accent bg-grim-dark/30'
-                    : 'text-gray-400 hover:text-gray-300 hover:bg-grim-dark/20'
+                    ? 'bg-grim-accent text-black'
+                    : 'bg-grim-dark/50 text-gray-400 hover:text-gray-200'
                 }`}
               >
                 Select Keys
@@ -72,7 +75,7 @@ export default function ConfiguratorPage() {
             </div>
             
             {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto">
               {activeTab === 'customize' && <ControlPanel />}
               {activeTab === 'select' && <KeySelectionPanel />}
             </div>
@@ -107,6 +110,34 @@ export default function ConfiguratorPage() {
           </div>
         </div>
       </div>
+
+
+      {/* Save Design Modal */}
+      <SaveDesignModal 
+        isOpen={showSaveModal} 
+        onClose={() => setShowSaveModal(false)} 
+      />
+
+      {/* Save Design Button - ABSOLUTE HIGHEST Z-INDEX, RENDERED LAST */}
+      <button
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          console.log('Save Design clicked!')
+          setShowSaveModal(true)
+        }}
+        onMouseEnter={() => console.log('Mouse entered Save Design button')}
+        className="fixed top-6 right-6 z-[9999] px-6 py-3 bg-grim-accent text-black font-display font-bold rounded-lg hover:bg-grim-accent/90 transition-all duration-200 flex items-center gap-2 shadow-2xl cursor-pointer"
+        style={{ 
+          pointerEvents: 'auto', 
+          cursor: 'pointer',
+          position: 'fixed',
+          zIndex: 9999
+        }}
+      >
+        <Save className="w-5 h-5" />
+        Save Design
+      </button>
     </div>
   )
 }

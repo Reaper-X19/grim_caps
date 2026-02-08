@@ -9,6 +9,7 @@ import ConfiguratorPage from './pages/ConfiguratorPage'
 import AboutPage from './pages/AboutPage'
 import GalleryPage from './pages/GalleryPage'
 import ContactPage from './pages/ContactPage'
+import CartPage from './pages/CartPage'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -50,6 +51,7 @@ function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/gallery" element={<GalleryPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/cart" element={<CartPage />} />
         </Routes>
       </div>
     </Layout>

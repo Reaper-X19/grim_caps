@@ -217,21 +217,6 @@ const useConfiguratorStore = create((set, get) => ({
     
     const newCustomizations = { ...state.keyCustomizations }
     
-    // Check for conflicts: keys already assigned to other layers
-    const conflicts = []
-    state.selectedKeys.forEach(keyName => {
-      const existing = newCustomizations[keyName]
-      if (existing && existing.layerId !== state.activeLayerId) {
-        conflicts.push(keyName)
-      }
-    })
-    
-    // If there are conflicts, don't apply (user must clear those keys first)
-    if (conflicts.length > 0) {
-      console.warn('Cannot assign keys already used in other layers:', conflicts)
-      return state
-    }
-    
     // Store the current selection as a group - this is critical for bounding box calculation
     const selectedKeysList = [...state.selectedKeys]
     
@@ -247,11 +232,20 @@ const useConfiguratorStore = create((set, get) => ({
       }
     })
     
+    // Update layer's selectedKeys to match what was applied
+    const updatedLayers = state.layers.map(layer =>
+      layer.id === state.activeLayerId
+        ? { ...layer, selectedKeys: selectedKeysList }
+        : layer
+    )
+    
     return {
       keyCustomizations: newCustomizations,
-      selectedKeys: selectedKeysList, // Keep selection so user can edit it
-      selectionLocked: true, // Lock selection after applying
-      selectionMode: false // Exit selection mode (shows "Edit Selection" button)
+      layers: updatedLayers,
+      // KEEP SELECTION ACTIVE AND LOCKED for immediate editing
+      selectedKeys: selectedKeysList,
+      selectionMode: false, // Exit selection mode (shows "Edit Selection" button)
+      selectionLocked: true // Lock selection to prevent accidental changes
     }
   }),
   

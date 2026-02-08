@@ -1,9 +1,14 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import CartIcon from '../cart/CartIcon'
 
 export default function Navbar() {
+  const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  
+  // Hide Start Designing button on configurator page
+  const isConfiguratorPage = location.pathname === '/configurator'
 
   useEffect(() => {
     const handleScroll = () => {
@@ -14,13 +19,13 @@ export default function Navbar() {
   }, [])
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+    <nav className={`fixed top-0 left-0 right-0 z-50 pointer-events-none transition-all duration-300 ${
       scrolled ? 'glass shadow-lg' : 'bg-transparent'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 pointer-events-auto">
             <span className="text-2xl font-display font-bold text-grim-accent">
               GRIM
             </span>
@@ -30,7 +35,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-8 pointer-events-auto">
             <Link to="/configurator" className="text-white hover:text-grim-accent transition-colors">
               Configurator
             </Link>
@@ -43,15 +48,18 @@ export default function Navbar() {
             <Link to="/contact" className="text-white hover:text-grim-accent transition-colors">
               Contact
             </Link>
+            <CartIcon />
           </div>
 
-          {/* CTA Button */}
-          <Link 
-            to="/configurator" 
-            className="hidden md:block px-6 py-3 bg-gradient-to-r from-grim-accent to-grim-blue text-grim-darker font-display font-semibold rounded-lg hover:scale-105 transition-transform"
-          >
-            Start Designing
-          </Link>
+          {/* CTA Button - Hide on configurator page */}
+          {!isConfiguratorPage && (
+            <Link 
+              to="/configurator" 
+              className="hidden md:block px-6 py-3 bg-gradient-to-r from-grim-accent to-grim-blue text-grim-darker font-display font-semibold rounded-lg hover:scale-105 transition-transform pointer-events-auto"
+            >
+              Start Designing
+            </Link>
+          )}
 
           {/* Mobile Menu Button */}
           <button
