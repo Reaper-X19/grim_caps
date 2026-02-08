@@ -1,31 +1,55 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { fetchGalleryDesigns } from '../services/supabase'
+import DesignCard from '../components/gallery/DesignCard'
 
 gsap.registerPlugin(ScrollTrigger)
 
 export default function GalleryPage() {
   const pageRef = useRef(null)
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [designs, setDesigns] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const categories = ['all', 'anime', 'minimal', 'abstract', 'custom']
+  // Fetch designs from Supabase
+  useEffect(() => {
+    async function fetchDesigns() {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const data = await fetchGalleryDesigns({
+          limit: 50,
+          sortBy: 'created_at'
+        })
+        
+        setDesigns(data || [])
+      } catch (err) {
+        console.error('Error fetching designs:', err)
+        setError(err.message || 'Failed to load designs')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchDesigns()
+  }, [])
 
-  const galleryItems = [
-    { id: 1, category: 'anime', title: 'Demon Slayer Set', description: 'Custom anime-themed keycaps' },
-    { id: 2, category: 'minimal', title: 'Monochrome Elegance', description: 'Clean black and white design' },
-    { id: 3, category: 'abstract', title: 'Neon Dreams', description: 'Vibrant abstract patterns' },
-    { id: 4, category: 'custom', title: 'Personal Logo', description: 'Custom brand keycaps' },
-    { id: 5, category: 'anime', title: 'One Piece Theme', description: 'Pirate-inspired design' },
-    { id: 6, category: 'minimal', title: 'Nordic Frost', description: 'Minimalist winter theme' },
-    { id: 7, category: 'abstract', title: 'Cosmic Waves', description: 'Space-themed abstract' },
-    { id: 8, category: 'custom', title: 'Gaming Clan', description: 'Esports team branding' },
-  ]
+  const categories = ['all', 'popular', 'recent', 'most-liked']
 
-  const filteredItems = selectedCategory === 'all' 
-    ? galleryItems 
-    : galleryItems.filter(item => item.category === selectedCategory)
+  const filteredDesigns = selectedCategory === 'all' 
+    ? designs 
+    : selectedCategory === 'popular'
+    ? [...designs].sort((a, b) => (b.likes_count + b.copies_count) - (a.likes_count + a.copies_count))
+    : selectedCategory === 'recent'
+    ? [...designs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    : selectedCategory === 'most-liked'
+    ? [...designs].sort((a, b) => b.likes_count - a.likes_count)
+    : designs
 
   // Add your custom animations here
 
@@ -73,37 +97,54 @@ export default function GalleryPage() {
       {/* Gallery Grid */}
       <section className="py-24 px-4 bg-gradient-to-b from-grim-dark to-grim-darker">
         <div className="max-w-7xl mx-auto">
-          <div className="gallery-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="gallery-item glass rounded-xl overflow-hidden hover:border-grim-accent transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-grim-accent/20 group cursor-pointer"
-              >
-                {/* Placeholder image area */}
-                <div className="aspect-square bg-gradient-to-br from-grim-gray-800 to-grim-gray-700 flex items-center justify-center group-hover:from-grim-accent/20 group-hover:to-grim-purple/20 transition-all duration-300">
-                  <svg className="w-20 h-20 text-grim-accent/30 group-hover:text-grim-accent/60 group-hover:scale-110 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                
-                {/* Content */}
-                <div className="p-6">
-                  <h3 className="text-xl font-display font-semibold mb-2 group-hover:text-grim-accent transition-colors">
-                    {item.title}
-                  </h3>
-                  <p className="text-gray-400 text-sm mb-4">{item.description}</p>
-                  <span className="inline-block px-3 py-1 bg-grim-accent/10 text-grim-accent text-xs font-semibold rounded-full">
-                    {item.category}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {filteredItems.length === 0 && (
-            <div className="text-center py-20">
-              <p className="text-gray-400 text-xl">No designs found in this category.</p>
+          {/* Loading State */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-grim-accent border-t-transparent mb-4"></div>
+              <p className="text-gray-400 text-lg">Loading designs...</p>
             </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-500/10 rounded-full mb-4">
+                <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-red-400 text-xl mb-2">Failed to load designs</p>
+              <p className="text-gray-500 text-sm">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-6 px-6 py-3 bg-grim-accent text-black font-semibold rounded-lg hover:bg-grim-accent/90 transition-all"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Gallery Grid */}
+          {!loading && !error && (
+            <>
+              <div className="gallery-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredDesigns.map((design) => (
+                  <DesignCard key={design.id} design={design} />
+                ))}
+              </div>
+
+              {filteredDesigns.length === 0 && (
+                <div className="text-center py-20">
+                  <p className="text-gray-400 text-xl">No designs found in this category.</p>
+                  <Link 
+                    to="/configurator"
+                    className="inline-block mt-6 px-6 py-3 bg-grim-accent text-black font-semibold rounded-lg hover:bg-grim-accent/90 transition-all"
+                  >
+                    Be the first to create one!
+                  </Link>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
