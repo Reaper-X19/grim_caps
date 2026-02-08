@@ -285,11 +285,11 @@ export async function uploadTexture(file, designId) {
   const timestamp = Date.now()
   const fileExt = file.name.split('.').pop()
   const fileName = `${designId}_${timestamp}.${fileExt}`
-  const filePath = `textures/${fileName}`
+  const filePath = `${fileName}`
 
   // Upload to Supabase Storage
   const { data, error } = await supabase.storage
-    .from('designs')
+    .from('textures')
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: false
@@ -302,7 +302,7 @@ export async function uploadTexture(file, designId) {
 
   // Get public URL
   const { data: { publicUrl } } = supabase.storage
-    .from('designs')
+    .from('textures')
     .getPublicUrl(filePath)
 
   return publicUrl
