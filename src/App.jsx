@@ -10,11 +10,29 @@ import AboutPage from './pages/AboutPage'
 import GalleryPage from './pages/GalleryPage'
 import ContactPage from './pages/ContactPage'
 import CartPage from './pages/CartPage'
+import MyDesignsPage from './pages/MyDesignsPage'
+import { onAuthStateChange } from './services/auth'
+import useAuthStore from './store/authStore'
 
 gsap.registerPlugin(ScrollTrigger)
 
 function App() {
   const location = useLocation()
+  const setSession = useAuthStore(state => state.setSession)
+  const setLoading = useAuthStore(state => state.setLoading)
+
+  // Initialize auth state
+  useEffect(() => {
+    // Listen to auth state changes
+    const { unsubscribe } = onAuthStateChange((event, session) => {
+      setSession(session)
+      setLoading(false)
+    })
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [setSession, setLoading])
 
   // Scroll to top and refresh ScrollTrigger on route change
   useEffect(() => {
@@ -52,6 +70,7 @@ function App() {
           <Route path="/gallery" element={<GalleryPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/my-designs" element={<MyDesignsPage />} />
         </Routes>
       </div>
     </Layout>

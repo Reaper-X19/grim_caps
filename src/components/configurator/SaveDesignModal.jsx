@@ -3,6 +3,8 @@ import { X, Upload, Check, AlertCircle } from 'lucide-react'
 import { saveDesign, uploadTexture } from '../../services/supabase'
 import { calculateDesignPrice } from '../../utils/pricing'
 import useConfiguratorStore from '../../store/configuratorStore'
+import useAuthStore from '../../store/authStore'
+import AuthModal from '../auth/AuthModal'
 
 const CATEGORIES = [
   { value: 'gaming', label: 'Gaming', emoji: '🎮' },
@@ -26,6 +28,10 @@ export default function SaveDesignModal({ isOpen, onClose }) {
   const [status, setStatus] = useState('idle') // idle | saving | success | error
   const [error, setError] = useState(null)
   const [savedDesignId, setSavedDesignId] = useState(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+
+  // Get auth state
+  const user = useAuthStore(state => state.user)
 
   // Get configurator state
   const activeLayerId = useConfiguratorStore(state => state.activeLayerId)
@@ -42,6 +48,12 @@ export default function SaveDesignModal({ isOpen, onClose }) {
     if (!formData.authorName.trim()) return { valid: false, message: 'Author name is required' }
     if (selectedKeys.length === 0) return { valid: false, message: 'Please select at least one key' }
     if (!activeLayer?.textureUrl) return { valid: false, message: 'Please upload a texture' }
+    
+    // Check auth for private designs
+    if (!formData.isPublic && !user) {
+      return { valid: false, message: 'Please sign in to save private designs', requiresAuth: true }
+    }
+    
     return { valid: true }
   }
 
@@ -50,6 +62,10 @@ export default function SaveDesignModal({ isOpen, onClose }) {
     
     const validation = canSave()
     if (!validation.valid) {
+      if (validation.requiresAuth) {
+        setShowAuthModal(true)
+        return
+      }
       setError(validation.message)
       return
     }
@@ -102,7 +118,8 @@ export default function SaveDesignModal({ isOpen, onClose }) {
         tags: formData.tags
           .split(',')
           .map(tag => tag.trim())
-          .filter(tag => tag.length > 0)
+          .filter(tag => tag.length > 0),
+        userId: user?.id || null // Include user_id if authenticated
       }
 
       // Save to database
@@ -361,6 +378,13 @@ export default function SaveDesignModal({ isOpen, onClose }) {
           </form>
         )}
       </div>
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)}
+        defaultTab="signin"
+      />
     </div>
   )
 }

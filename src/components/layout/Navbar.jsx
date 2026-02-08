@@ -1,11 +1,18 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { LogIn } from 'lucide-react'
 import CartIcon from '../cart/CartIcon'
+import UserMenu from '../auth/UserMenu'
+import AuthModal from '../auth/AuthModal'
+import useAuthStore from '../../store/authStore'
 
 export default function Navbar() {
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  
+  const user = useAuthStore(state => state.user)
   
   // Hide Start Designing button on configurator page
   const isConfiguratorPage = location.pathname === '/configurator'
@@ -52,8 +59,19 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Cart Icon - RIGHT */}
-          <div className="hidden md:block pointer-events-auto">
+          {/* Right Side - Auth & Cart */}
+          <div className="hidden md:flex items-center gap-3 pointer-events-auto">
+            {user ? (
+              <UserMenu />
+            ) : (
+              <button
+                onClick={() => setAuthModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-grim-accent to-grim-blue text-black font-semibold rounded-lg hover:scale-105 transition-all duration-300"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign In
+              </button>
+            )}
             <CartIcon />
           </div>
 
@@ -89,9 +107,25 @@ export default function Navbar() {
             <Link to="/contact" className="block px-3 py-2 text-white hover:text-grim-accent">
               Contact
             </Link>
+            
+            {/* Mobile Auth */}
+            {!user && (
+              <button
+                onClick={() => {
+                  setAuthModalOpen(true)
+                  setMobileMenuOpen(false)
+                }}
+                className="w-full text-left px-3 py-2 text-grim-accent hover:bg-gray-800/50 rounded-lg"
+              >
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </nav>
   )
 }
