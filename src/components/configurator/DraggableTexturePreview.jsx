@@ -117,6 +117,7 @@ export default function DraggableTexturePreview({
 
   const handleWheel = (e) => {
     e.preventDefault()
+    e.stopPropagation() // Prevent scrollbar scrolling
     const delta = e.deltaY > 0 ? -0.1 : 0.1
     const newZoom = Math.max(minZoom, Math.min(3.0, zoom + delta))
     onZoomChange(newZoom)
