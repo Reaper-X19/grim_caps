@@ -1,4 +1,3 @@
-```
 import { X, Heart, Copy, ShoppingCart, User, Calendar } from 'lucide-react'
 import { formatPrice } from '../../utils/pricing'
 import { useState } from 'react'
