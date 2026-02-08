@@ -1,7 +1,11 @@
-import { useEffect } from 'react'
+import { useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import useConfiguratorStore from '../../store/configuratorStore'
+import DraggableTexturePreview from './DraggableTexturePreview'
 
 export default function TextureControls() {
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  
   const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
   const activeLayer = useConfiguratorStore((state) => 
     state.layers.find(layer => layer.id === activeLayerId)
@@ -9,18 +13,18 @@ export default function TextureControls() {
   const updateTextureTransform = useConfiguratorStore((state) => state.updateTextureTransform)
   const resetTextureTransform = useConfiguratorStore((state) => state.resetTextureTransform)
   
-  if (!activeLayer) return null
+  if (!activeLayer || !activeLayer.textureUrl) return null
   
   const { zoom, positionX, positionY, rotation } = activeLayer.textureTransform
   
-  // Calculate max position based on zoom to prevent texture from exceeding edges
-  // CRITICAL: Higher zoom (scaled up) = MORE movement needed, BUT capped to prevent bleeding
-  // At zoom 1.0, allow ±20 units (reduced from ±30)
-  // At zoom 3.0, allow ±50 units (reduced from ±90 to prevent bleeding beyond edges)
+  // Calculate minimum zoom to ensure texture always covers area (WhatsApp-style)
+  const minZoom = 1.0 // Can be calculated based on image aspect ratio later
+  
+  // Calculate max position based on zoom
   const getMaxPosition = (currentZoom) => {
-    const baseMax = 20 // Reduced from 30
+    const baseMax = 20
     const maxPos = baseMax * currentZoom
-    return Math.min(50, Math.max(20, maxPos)) // Range: 20 to 50 (reduced from 30-90)
+    return Math.min(50, Math.max(20, maxPos))
   }
   
   const maxPosition = getMaxPosition(zoom)
@@ -28,7 +32,12 @@ export default function TextureControls() {
   const handleChange = (property, value) => {
     let finalValue = parseFloat(value)
     
-    // Clamp position values to prevent exceeding edges
+    // Ensure zoom never goes below minZoom (WhatsApp-style: always covers area)
+    if (property === 'zoom') {
+      finalValue = Math.max(minZoom, Math.min(3.0, finalValue))
+    }
+    
+    // Clamp position values
     if (property === 'positionX' || property === 'positionY') {
       finalValue = Math.max(-maxPosition, Math.min(maxPosition, finalValue))
     }
@@ -36,20 +45,17 @@ export default function TextureControls() {
     updateTextureTransform(activeLayerId, { [property]: finalValue })
   }
   
-  // Auto-clamp existing values when zoom changes
-  useEffect(() => {
-    if (Math.abs(positionX) > maxPosition || Math.abs(positionY) > maxPosition) {
-      const clampedX = Math.max(-maxPosition, Math.min(maxPosition, positionX))
-      const clampedY = Math.max(-maxPosition, Math.min(maxPosition, positionY))
-      
-      if (clampedX !== positionX || clampedY !== positionY) {
-        updateTextureTransform(activeLayerId, {
-          positionX: clampedX,
-          positionY: clampedY
-        })
-      }
-    }
-  }, [zoom, maxPosition, positionX, positionY, activeLayerId, updateTextureTransform])
+  const handlePositionChange = (newX, newY) => {
+    updateTextureTransform(activeLayerId, { 
+      positionX: newX, 
+      positionY: newY 
+    })
+  }
+  
+  const handleZoomChange = (newZoom) => {
+    const clampedZoom = Math.max(minZoom, Math.min(3.0, newZoom))
+    updateTextureTransform(activeLayerId, { zoom: clampedZoom })
+  }
   
   return (
     <div className="space-y-4">
@@ -63,7 +69,18 @@ export default function TextureControls() {
         </button>
       </div>
       
-      {/* Zoom */}
+      {/* WhatsApp-Style Draggable Preview */}
+      <DraggableTexturePreview
+        textureUrl={activeLayer.textureUrl}
+        zoom={zoom}
+        positionX={positionX}
+        positionY={positionY}
+        minZoom={minZoom}
+        onPositionChange={handlePositionChange}
+        onZoomChange={handleZoomChange}
+      />
+      
+      {/* Zoom Slider - Always Visible */}
       <div className="space-y-1.5">
         <div className="flex justify-between items-center">
           <label className="text-sm font-medium text-gray-300">Zoom</label>
@@ -71,66 +88,87 @@ export default function TextureControls() {
         </div>
         <input
           type="range"
-          min="1"
+          min={minZoom}
           max="3"
-          step="0.1"
+          step="0.01"
           value={zoom}
           onChange={(e) => handleChange('zoom', e.target.value)}
           className="w-full h-2 bg-grim-dark rounded-lg appearance-none cursor-pointer slider"
         />
+        <p className="text-xs text-gray-600 italic">
+          {zoom === minZoom ? 'Minimum (100% coverage)' : `${((zoom / minZoom) * 100).toFixed(0)}% zoom`}
+        </p>
       </div>
       
-      {/* Position X - CLAMPED BASED ON ZOOM */}
-      <div className="space-y-1.5">
-        <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-gray-300">Position X</label>
-          <span className="text-xs text-gray-500 font-mono">{positionX.toFixed(1)}</span>
-        </div>
-        <input
-          type="range"
-          min={-maxPosition}
-          max={maxPosition}
-          step="1"
-          value={positionX}
-          onChange={(e) => handleChange('positionX', e.target.value)}
-          className="w-full h-2 bg-grim-dark rounded-lg appearance-none cursor-pointer slider"
-        />
-        <p className="text-xs text-gray-600 italic">Range: ±{maxPosition.toFixed(0)} (auto-adjusted for zoom)</p>
-      </div>
-      
-      {/* Position Y - CLAMPED BASED ON ZOOM */}
-      <div className="space-y-1.5">
-        <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-gray-300">Position Y</label>
-          <span className="text-xs text-gray-500 font-mono">{positionY.toFixed(1)}</span>
-        </div>
-        <input
-          type="range"
-          min={-maxPosition}
-          max={maxPosition}
-          step="1"
-          value={positionY}
-          onChange={(e) => handleChange('positionY', e.target.value)}
-          className="w-full h-2 bg-grim-dark rounded-lg appearance-none cursor-pointer slider"
-        />
-        <p className="text-xs text-gray-600 italic">Range: ±{maxPosition.toFixed(0)} (auto-adjusted for zoom)</p>
-      </div>
-      
-      {/* Rotation */}
-      <div className="space-y-1.5">
-        <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-gray-300">Rotation</label>
-          <span className="text-xs text-gray-500 font-mono">{rotation}°</span>
-        </div>
-        <input
-          type="range"
-          min="0"
-          max="360"
-          step="1"
-          value={rotation}
-          onChange={(e) => handleChange('rotation', e.target.value)}
-          className="w-full h-2 bg-grim-dark rounded-lg appearance-none cursor-pointer slider"
-        />
+      {/* Advanced Controls - Collapsible */}
+      <div className="border-t border-gray-800 pt-3">
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center justify-between w-full text-sm font-medium text-gray-400 hover:text-grim-accent transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-xs">⚙️</span>
+            Advanced Controls
+          </span>
+          {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        
+        {showAdvanced && (
+          <div className="mt-3 space-y-4 pl-2">
+            {/* Precision Position X */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-300">Position X (Precision)</label>
+                <span className="text-xs text-gray-500 font-mono">{positionX.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min={-maxPosition}
+                max={maxPosition}
+                step="0.01"
+                value={positionX}
+                onChange={(e) => handleChange('positionX', e.target.value)}
+                className="w-full h-2 bg-grim-dark rounded-lg appearance-none cursor-pointer slider"
+              />
+              <p className="text-xs text-gray-600 italic">Range: ±{maxPosition.toFixed(0)}</p>
+            </div>
+            
+            {/* Precision Position Y */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-300">Position Y (Precision)</label>
+                <span className="text-xs text-gray-500 font-mono">{positionY.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min={-maxPosition}
+                max={maxPosition}
+                step="0.01"
+                value={positionY}
+                onChange={(e) => handleChange('positionY', e.target.value)}
+                className="w-full h-2 bg-grim-dark rounded-lg appearance-none cursor-pointer slider"
+              />
+              <p className="text-xs text-gray-600 italic">Range: ±{maxPosition.toFixed(0)}</p>
+            </div>
+            
+            {/* Rotation */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-300">Rotation</label>
+                <span className="text-xs text-gray-500 font-mono">{rotation}°</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="360"
+                step="1"
+                value={rotation}
+                onChange={(e) => handleChange('rotation', e.target.value)}
+                className="w-full h-2 bg-grim-dark rounded-lg appearance-none cursor-pointer slider"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

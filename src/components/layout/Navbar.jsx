@@ -34,32 +34,28 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8 pointer-events-auto">
-            <Link to="/configurator" className="text-white hover:text-grim-accent transition-colors">
+          {/* Desktop Navigation - CENTERED */}
+          <div className="hidden md:flex items-center space-x-6 pointer-events-auto absolute left-1/2 transform -translate-x-1/2">
+            <Link to="/configurator" className={`text-sm font-medium transition-colors ${
+              isConfiguratorPage ? 'text-grim-accent' : 'text-white hover:text-grim-accent'
+            }`}>
               Configurator
             </Link>
-            <Link to="/gallery" className="text-white hover:text-grim-accent transition-colors">
+            <Link to="/gallery" className="text-sm font-medium text-white hover:text-grim-accent transition-colors">
               Gallery
             </Link>
-            <Link to="/about" className="text-white hover:text-grim-accent transition-colors">
+            <Link to="/about" className="text-sm font-medium text-white hover:text-grim-accent transition-colors">
               About
             </Link>
-            <Link to="/contact" className="text-white hover:text-grim-accent transition-colors">
+            <Link to="/contact" className="text-sm font-medium text-white hover:text-grim-accent transition-colors">
               Contact
             </Link>
-            <CartIcon />
           </div>
 
-          {/* CTA Button - Hide on configurator page */}
-          {!isConfiguratorPage && (
-            <Link 
-              to="/configurator" 
-              className="hidden md:block px-6 py-3 bg-gradient-to-r from-grim-accent to-grim-blue text-grim-darker font-display font-semibold rounded-lg hover:scale-105 transition-transform pointer-events-auto"
-            >
-              Start Designing
-            </Link>
-          )}
+          {/* Cart Icon - RIGHT */}
+          <div className="hidden md:block pointer-events-auto">
+            <CartIcon />
+          </div>
 
           {/* Mobile Menu Button */}
           <button
