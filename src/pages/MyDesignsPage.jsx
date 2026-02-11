@@ -4,12 +4,14 @@ import { Trash2, Edit, Eye, Lock, Globe } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import { supabase } from '../services/supabase'
 import { formatPrice } from '../utils/pricing'
+import useConfiguratorStore from '../store/configuratorStore'
 
 export default function MyDesignsPage() {
   const [designs, setDesigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // 'all', 'public', 'private'
   const user = useAuthStore(state => state.user)
+  const loadDesign = useConfiguratorStore(state => state.loadDesign)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -58,6 +60,13 @@ export default function MyDesignsPage() {
       console.error('Error deleting design:', error)
       alert('Failed to delete design')
     }
+  }
+
+  const handleViewDesign = (design) => {
+    // Load the design into the configurator
+    loadDesign(design)
+    // Navigate to configurator
+    navigate('/configurator')
   }
 
   const filteredDesigns = designs.filter(design => {
@@ -186,7 +195,7 @@ export default function MyDesignsPage() {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => navigate(`/gallery`)}
+                      onClick={() => handleViewDesign(design)}
                       className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       <Eye className="w-4 h-4" />

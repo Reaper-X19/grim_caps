@@ -72,13 +72,15 @@ export async function saveDesign(designData) {
     totalPrice,
     isPublic = false,
     category = 'custom',
-    tags = []
+    tags = [],
+    userId = null
   } = designData
 
   const { data, error } = await supabase
     .from('user_designs')
     .insert([
       {
+        user_id: userId,
         name: title,
         description,
         author_name: authorName,

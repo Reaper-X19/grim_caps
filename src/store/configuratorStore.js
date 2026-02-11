@@ -347,6 +347,34 @@ const useConfiguratorStore = create((set, get) => ({
   getKeyLayer: (keyName) => {
     const state = get()
     return state.keyCustomizations[keyName]?.layerId || null
+  },
+
+  // Load a saved design into the configurator
+  loadDesign: (designData) => {
+    set({
+      selectedKeys: designData.selected_keys || [],
+      layers: [
+        {
+          id: 'layer-1',
+          name: 'Set 1',
+          selectedKeys: designData.selected_keys || [],
+          texture: null,
+          textureUrl: designData.texture_url || null,
+          baseColor: designData.base_color || '#ffffff',
+          textureTransform: designData.texture_config || {
+            zoom: 1,
+            positionX: 0,
+            positionY: 0,
+            rotation: 0
+          },
+          visible: true
+        }
+      ],
+      activeLayerId: 'layer-1',
+      keyCustomizations: {},
+      selectionLocked: false,
+      selectionMode: false
+    })
   }
 }))
 

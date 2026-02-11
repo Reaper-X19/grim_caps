@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Upload, Check, AlertCircle } from 'lucide-react'
-import { saveDesign, uploadTexture } from '../../services/supabase'
+import { saveDesign, uploadTexture, supabase } from '../../services/supabase'
 import { calculateDesignPrice } from '../../utils/pricing'
 import useConfiguratorStore from '../../store/configuratorStore'
 import useAuthStore from '../../store/authStore'
@@ -40,6 +40,28 @@ export default function SaveDesignModal({ isOpen, onClose }) {
   const keyCustomizations = useConfiguratorStore(state => state.keyCustomizations)
 
   const activeLayer = layers.find(l => l.id === activeLayerId)
+
+  // Auto-fill name and email when user is signed in
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user && isOpen) {
+        // Try to fetch profile name from database
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', user.id)
+          .single()
+        
+        setFormData(prev => ({
+          ...prev,
+          authorName: profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || '',
+          authorEmail: user.email || ''
+        }))
+      }
+    }
+    
+    fetchUserProfile()
+  }, [user, isOpen])
 
   // Validation
   // Validation for enabling the save button
