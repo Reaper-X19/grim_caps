@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Upload, Check, AlertCircle } from 'lucide-react'
 import { saveDesign, uploadTexture, supabase } from '../../services/supabase'
 import { calculateDesignPrice } from '../../utils/pricing'
+import { calculateKeysBoundingBox } from '../../shaders/KeycapShader'
 import useConfiguratorStore from '../../store/configuratorStore'
 import useAuthStore from '../../store/authStore'
 import AuthModal from '../auth/AuthModal'
@@ -24,7 +25,7 @@ export default function SaveDesignModal({ isOpen, onClose }) {
     tags: '',
     isPublic: false
   })
-  
+
   const [status, setStatus] = useState('idle') // idle | saving | success | error
   const [error, setError] = useState(null)
   const [savedDesignId, setSavedDesignId] = useState(null)
@@ -51,7 +52,7 @@ export default function SaveDesignModal({ isOpen, onClose }) {
           .select('name')
           .eq('id', user.id)
           .single()
-        
+
         setFormData(prev => ({
           ...prev,
           authorName: profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || '',
@@ -59,7 +60,7 @@ export default function SaveDesignModal({ isOpen, onClose }) {
         }))
       }
     }
-    
+
     fetchUserProfile()
   }, [user, isOpen])
 
@@ -71,28 +72,28 @@ export default function SaveDesignModal({ isOpen, onClose }) {
     if (!formData.authorName.trim()) return { valid: false, message: 'Author name is required' }
     if (selectedKeys.length === 0) return { valid: false, message: 'Please select at least one key' }
     if (!activeLayer?.textureUrl) return { valid: false, message: 'Please upload a texture' }
-    
+
     return { valid: true }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     console.log('SaveDesignModal - handleSubmit called')
     console.log('formData.isPublic:', formData.isPublic)
     console.log('user:', user)
-    
+
     // Check auth FIRST for private designs
     if (!formData.isPublic && !user) {
       console.log('Private design requires auth - showing auth modal')
       setShowAuthModal(true)
       return
     }
-    
+
     // Then validate form
     const validation = canSave()
     console.log('validation result:', validation)
-    
+
     if (!validation.valid) {
       setError(validation.message)
       return
@@ -112,13 +113,13 @@ export default function SaveDesignModal({ isOpen, onClose }) {
           // Fetch the blob
           const response = await fetch(textureUrl)
           const blob = await response.blob()
-          
+
           // Create a File object from the blob
           const file = new File([blob], 'texture.png', { type: blob.type })
-          
+
           // Generate a temporary design ID for the upload path
           const tempDesignId = crypto.randomUUID()
-          
+
           // Upload to Supabase storage
           textureUrl = await uploadTexture(file, tempDesignId)
         } catch (uploadError) {
@@ -134,7 +135,14 @@ export default function SaveDesignModal({ isOpen, onClose }) {
         authorName: formData.authorName.trim(),
         authorEmail: formData.authorEmail.trim() || null,
         textureUrl: textureUrl,
-        textureTransform: activeLayer.textureTransform,
+        textureTransform: {
+          ...activeLayer.textureTransform,
+          // Include bounding box for consistent texture mapping on reload
+          ...(activeLayer.boundingBox && {
+            boundsMin: { x: activeLayer.boundingBox.min.x, y: activeLayer.boundingBox.min.y },
+            boundsMax: { x: activeLayer.boundingBox.max.x, y: activeLayer.boundingBox.max.y }
+          })
+        },
         selectedKeys: selectedKeys,
         keyGroup: selectedKeys,
         baseColor: activeLayer.baseColor,
@@ -152,7 +160,7 @@ export default function SaveDesignModal({ isOpen, onClose }) {
 
       // Save to database
       const savedDesign = await saveDesign(designData)
-      
+
       setSavedDesignId(savedDesign.id)
       setStatus('success')
 
@@ -212,7 +220,7 @@ export default function SaveDesignModal({ isOpen, onClose }) {
               </div>
               <h3 className="text-xl font-bold mb-2">Design Saved!</h3>
               <p className="text-gray-400 mb-4">
-                {formData.isPublic 
+                {formData.isPublic
                   ? 'Your design has been saved and published to the gallery.'
                   : 'Your design has been saved privately.'}
               </p>
@@ -248,7 +256,7 @@ export default function SaveDesignModal({ isOpen, onClose }) {
               <div className="flex items-center justify-between text-sm mt-2">
                 <span className="text-gray-400">Estimated Price:</span>
                 <span className="font-semibold">
-                  {selectedKeys.length > 0 
+                  {selectedKeys.length > 0
                     ? `₹${(calculateDesignPrice(selectedKeys.length).totalPrice / 100).toFixed(0)}`
                     : '—'}
                 </span>
@@ -328,11 +336,10 @@ export default function SaveDesignModal({ isOpen, onClose }) {
                     key={cat.value}
                     type="button"
                     onClick={() => setFormData({ ...formData, category: cat.value })}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      formData.category === cat.value
-                        ? 'border-grim-accent bg-grim-accent/10'
-                        : 'border-gray-700 hover:border-gray-600'
-                    }`}
+                    className={`p-3 rounded-lg border-2 transition-all ${formData.category === cat.value
+                      ? 'border-grim-accent bg-grim-accent/10'
+                      : 'border-gray-700 hover:border-gray-600'
+                      }`}
                   >
                     <div className="text-2xl mb-1">{cat.emoji}</div>
                     <div className="text-xs font-semibold">{cat.label}</div>
@@ -406,10 +413,10 @@ export default function SaveDesignModal({ isOpen, onClose }) {
           </form>
         )}
       </div>
-      
+
       {/* Auth Modal */}
-      <AuthModal 
-        isOpen={showAuthModal} 
+      <AuthModal
+        isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         defaultTab="signin"
       />

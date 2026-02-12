@@ -23,26 +23,46 @@ function App() {
 
   // Initialize auth state
   useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Get initial session
+        const { getCurrentSession } = await import('./services/auth')
+        const { session } = await getCurrentSession()
+        setSession(session)
+      } catch (error) {
+        console.error('Error initializing auth:', error)
+        setSession(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Initialize auth
+    initAuth()
+
     // Listen to auth state changes
-    const { unsubscribe } = onAuthStateChange((event, session) => {
+    const subscription = onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event)
       setSession(session)
       setLoading(false)
     })
 
     return () => {
-      if (unsubscribe) unsubscribe()
+      if (subscription?.unsubscribe) {
+        subscription.unsubscribe()
+      }
     }
   }, [setSession, setLoading])
 
   // Scroll to top and refresh ScrollTrigger on route change
   useEffect(() => {
     window.scrollTo(0, 0)
-    
+
     // Small delay to let DOM update, then refresh ScrollTrigger
     const timer = setTimeout(() => {
       ScrollTrigger.refresh()
     }, 100)
-    
+
     return () => clearTimeout(timer)
   }, [location.pathname])
 
