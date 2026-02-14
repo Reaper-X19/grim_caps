@@ -121,7 +121,9 @@ export async function getCurrentUser() {
  * @returns {Object} Subscription object with unsubscribe method
  */
 export function onAuthStateChange(callback) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(callback)
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    callback(event, session)
+  })
   return subscription
 }
 
@@ -174,8 +176,8 @@ export function validatePassword(password) {
 
   return {
     valid,
-    message: valid 
-      ? 'Password is strong' 
+    message: valid
+      ? 'Password is strong'
       : `Password must contain ${issues.join(', ')}`,
     strength: (strength / 5) * 100 // 0-100
   }

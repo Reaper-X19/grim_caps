@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trash2, Edit, Eye, Lock, Globe, ShoppingCart } from 'lucide-react'
+import { Trash2, Edit, Eye, Lock, Globe } from 'lucide-react'
 import useAuthStore from '../store/authStore'
-import useCartStore from '../store/cartStore'
 import { supabase } from '../services/supabase'
 import { formatPrice } from '../utils/pricing'
 import useConfiguratorStore from '../store/configuratorStore'
@@ -13,8 +12,6 @@ export default function MyDesignsPage() {
   const [filter, setFilter] = useState('all') // 'all', 'public', 'private'
   const user = useAuthStore(state => state.user)
   const loadDesign = useConfiguratorStore(state => state.loadDesign)
-  const addDesign = useCartStore(state => state.addDesign)
-  const isInCart = useCartStore(state => state.isInCart)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -70,15 +67,6 @@ export default function MyDesignsPage() {
     loadDesign(design)
     // Navigate to configurator
     navigate('/configurator')
-  }
-
-  const handleAddToCart = (design) => {
-    try {
-      addDesign(design, 1)
-    } catch (error) {
-      console.error('Error adding to cart:', error)
-      alert('Failed to add design to cart')
-    }
   }
 
   const filteredDesigns = designs.filter(design => {
@@ -207,22 +195,11 @@ export default function MyDesignsPage() {
                   {/* Actions */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleAddToCart(design)}
-                      className={`flex-1 px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                        isInCart(design.id)
-                          ? 'bg-grim-accent text-black cursor-default'
-                          : 'bg-gray-800 hover:bg-gray-700'
-                      }`}
-                      disabled={isInCart(design.id)}
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      {isInCart(design.id) ? 'In Cart' : 'Add to Cart'}
-                    </button>
-                    <button
                       onClick={() => handleViewDesign(design)}
-                      className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                      className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       <Eye className="w-4 h-4" />
+                      View
                     </button>
                     <button
                       onClick={() => handleDelete(design.id)}

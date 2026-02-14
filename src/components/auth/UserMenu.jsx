@@ -6,6 +6,7 @@ import useAuthStore from '../../store/authStore'
 
 export default function UserMenu() {
   const [isOpen, setIsOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const menuRef = useRef(null)
   const user = useAuthStore(state => state.user)
   const clearAuth = useAuthStore(state => state.clearAuth)
@@ -23,12 +24,17 @@ export default function UserMenu() {
   }, [])
 
   const handleSignOut = async () => {
+    if (signingOut) return // Prevent multiple simultaneous sign-outs
+
+    setSigningOut(true)
     try {
       await signOut()
       clearAuth()
       setIsOpen(false)
     } catch (error) {
       console.error('Error signing out:', error)
+    } finally {
+      setSigningOut(false)
     }
   }
 
@@ -36,7 +42,7 @@ export default function UserMenu() {
 
   // Get user display name
   const displayName = user.user_metadata?.name || user.email?.split('@')[0] || 'User'
-  
+
   // Get user avatar (from Google or generate initials)
   const avatarUrl = user.user_metadata?.avatar_url
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -56,12 +62,12 @@ export default function UserMenu() {
             <span>{initials}</span>
           )}
         </div>
-        
+
         {/* Name (desktop only) */}
         <span className="hidden md:block text-sm font-medium text-gray-300 group-hover:text-grim-accent transition-colors">
           {displayName}
         </span>
-        
+
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -87,10 +93,11 @@ export default function UserMenu() {
 
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800/50 hover:text-red-400 transition-colors"
+              disabled={signingOut}
+              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800/50 hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogOut className="w-4 h-4" />
-              Sign Out
+              {signingOut ? 'Signing Out...' : 'Sign Out'}
             </button>
           </div>
         </div>

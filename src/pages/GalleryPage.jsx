@@ -3,12 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { fetchGalleryDesigns, incrementCopyCount, getUserLikedDesigns } from '../services/supabase'
+import { fetchGalleryDesigns, incrementCopyCount } from '../services/supabase'
 import DesignCard from '../components/gallery/DesignCard'
 import ViewDetailsModal from '../components/gallery/ViewDetailsModal'
-import AuthModal from '../components/auth/AuthModal'
 import useConfiguratorStore from '../store/configuratorStore'
-import useAuthStore from '../store/authStore'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -20,9 +18,6 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedDesign, setSelectedDesign] = useState(null)
-  const [likedDesigns, setLikedDesigns] = useState(new Set())
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const user = useAuthStore(state => state.user)
 
   // Fetch designs from Supabase
   useEffect(() => {
@@ -30,12 +25,12 @@ export default function GalleryPage() {
       try {
         setLoading(true)
         setError(null)
-        
+
         const data = await fetchGalleryDesigns({
           limit: 50,
           sortBy: 'created_at'
         })
-        
+
         setDesigns(data || [])
       } catch (err) {
         console.error('Error fetching designs:', err)
@@ -44,90 +39,40 @@ export default function GalleryPage() {
         setLoading(false)
       }
     }
-    
+
     fetchDesigns()
   }, [])
 
-  // Load user's liked designs on mount and when user changes
-  useEffect(() => {
-    async function loadUserLikes() {
-      if (user) {
-        try {
-          const likedSet = await getUserLikedDesigns(user.id)
-          setLikedDesigns(likedSet)
-        } catch (err) {
-          console.error('Error loading user likes:', err)
-        }
-      } else {
-        setLikedDesigns(new Set())
-      }
-    }
-    
-    loadUserLikes()
-  }, [user])
-
-  // Sync selectedDesign with designs array when it changes
-  // This ensures the modal shows updated like counts immediately
-  useEffect(() => {
-    if (selectedDesign) {
-      const updatedDesign = designs.find(d => d.id === selectedDesign.id)
-      if (updatedDesign && updatedDesign.likes_count !== selectedDesign.likes_count) {
-        setSelectedDesign(updatedDesign)
-      }
-    }
-  }, [designs, selectedDesign])
-
   const categories = ['all', 'popular', 'recent', 'most-liked']
 
-  const filteredDesigns = selectedCategory === 'all' 
-    ? designs 
+  const filteredDesigns = selectedCategory === 'all'
+    ? designs
     : selectedCategory === 'popular'
-    ? [...designs].sort((a, b) => (b.likes_count + b.copies_count) - (a.likes_count + a.copies_count))
-    : selectedCategory === 'recent'
-    ? [...designs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    : selectedCategory === 'most-liked'
-    ? [...designs].sort((a, b) => b.likes_count - a.likes_count)
-    : designs
+      ? [...designs].sort((a, b) => (b.likes_count + b.copies_count) - (a.likes_count + a.copies_count))
+      : selectedCategory === 'recent'
+        ? [...designs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        : selectedCategory === 'most-liked'
+          ? [...designs].sort((a, b) => b.likes_count - a.likes_count)
+          : designs
 
   const handleViewDetails = (design) => {
     setSelectedDesign(design)
   }
 
-  const handleAuthRequired = () => {
-    setShowAuthModal(true)
-  }
-
-  const handleLikeUpdate = (designId, isLiked) => {
-    // Update local liked designs set
-    setLikedDesigns(prev => {
-      const newSet = new Set(prev)
-      if (isLiked) {
-        newSet.add(designId)
-      } else {
-        newSet.delete(designId)
-      }
-      return newSet
-    })
-
-    // Update the design in the designs array (optimistic update)
-    setDesigns(prev => prev.map(design => {
-      if (design.id === designId) {
-        return {
-          ...design,
-          likes_count: isLiked ? (design.likes_count || 0) + 1 : Math.max(0, (design.likes_count || 0) - 1)
-        }
-      }
-      return design
-    }))
+  const handleLikeUpdate = async (designId) => {
+    // Refresh the designs list to get updated like count
+    try {
+      const data = await fetchGalleryDesigns({
+        limit: 50,
+        sortBy: 'created_at'
+      })
+      setDesigns(data || [])
+    } catch (err) {
+      console.error('Error refreshing designs:', err)
+    }
   }
 
   const handleCopyToConfigurator = async (design) => {
-    // Check authentication
-    if (!user) {
-      setShowAuthModal(true)
-      return
-    }
-
     try {
       // Check if texture URL exists and is valid
       if (!design.texture_url || design.texture_url.startsWith('blob:')) {
@@ -137,50 +82,48 @@ export default function GalleryPage() {
 
       // Increment copy count
       await incrementCopyCount(design.id)
-      
+
       // Load design into configurator
       const configuratorStore = useConfiguratorStore.getState()
-      
+
       // Upload texture to active layer
       try {
         const response = await fetch(design.texture_url)
         if (!response.ok) throw new Error('Failed to fetch texture')
-        
+
         const blob = await response.blob()
         const file = new File([blob], 'texture.png', { type: blob.type })
-        
+
         configuratorStore.uploadTexture(configuratorStore.activeLayerId, file)
       } catch (fetchError) {
         console.error('Error fetching texture:', fetchError)
         alert('Failed to load texture. The image may be unavailable.')
         return
       }
-      
+
       // Set texture transform
-      if (design.texture_settings) {
+      if (design.texture_config) {
         configuratorStore.updateTextureTransform(
           configuratorStore.activeLayerId,
-          design.texture_settings
+          design.texture_config
         )
       }
-      
+
       // Set base color
       if (design.base_color) {
         configuratorStore.updateBaseColor(configuratorStore.activeLayerId, design.base_color)
       }
-      
+
       // Set selected keys
       if (design.selected_keys && design.selected_keys.length > 0) {
         configuratorStore.setSelectedKeys(design.selected_keys)
       }
-      
-      // Navigate to configurator
-      navigate('/configurator')
-      
-      // Close modal if open
+
+      // Close modal and navigate
       setSelectedDesign(null)
+      navigate('/configurator')
     } catch (error) {
-      console.error('Error copying design:', error)
+      console.error('Error copying to configurator:', error)
       alert('Failed to copy design. Please try again.')
     }
   }
@@ -188,125 +131,142 @@ export default function GalleryPage() {
   // Add your custom animations here
 
   return (
-    <div ref={pageRef} className="overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden" style={{
-        background: 'radial-gradient(ellipse at top, rgba(236, 72, 153, 0.15) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(139, 92, 246, 0.15) 0%, transparent 50%), linear-gradient(180deg, #0a0a0a 0%, #1f0a1f 50%, #0a0a1f 100%)'
-      }}>
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute w-96 h-96 bg-grim-purple/10 rounded-full blur-3xl bottom-20 left-20 animate-pulse"></div>
-        </div>
-        
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <h1 className="gallery-hero-title text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-6">
-            Design <span className="text-grim-accent text-glow">Gallery</span>
-          </h1>
-          <p className="gallery-hero-subtitle text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto">
-            Explore stunning custom keycap designs created by our community.
-          </p>
-        </div>
-      </section>
+    <div ref={pageRef} className="min-h-screen bg-grim-void overflow-hidden relative selection:bg-grim-cyan selection:text-black">
 
-      {/* Filters Section */}
-      <section className="filters-section py-12 px-4 bg-grim-dark border-b border-grim-gray-800">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap justify-center gap-4">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`category-btn px-6 py-3 rounded-lg font-display font-semibold text-sm uppercase tracking-wider transition-all duration-300 ${
-                  selectedCategory === category
-                    ? 'bg-gradient-to-r from-grim-accent to-grim-blue text-grim-darker scale-105 shadow-lg shadow-grim-accent/50'
-                    : 'glass text-gray-300 hover:text-grim-accent hover:border-grim-accent'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+      {/* 1. Cyber-Void Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {/* Dynamic Grid */}
+        <div className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `
+                 linear-gradient(rgba(176, 38, 255, 0.1) 1px, transparent 1px),
+                 linear-gradient(90deg, rgba(0, 240, 255, 0.1) 1px, transparent 1px)
+               `,
+            backgroundSize: '50px 50px',
+          }}>
+        </div>
+
+        {/* Glowing Orbs */}
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-grim-purple/10 rounded-full blur-[100px] animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-grim-cyan/10 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
+
+        {/* Vignette */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,#030014_100%)]"></div>
+      </div>
+
+      <div className="relative z-10">
+        {/* Hero Section */}
+        <section className="relative pt-32 pb-16 flex items-center justify-center overflow-hidden">
+          <div className="text-center px-4 max-w-4xl mx-auto">
+            <h1 className="text-4xl md:text-6xl font-display font-black mb-6 uppercase tracking-widest relative inline-block pb-4">
+              <span className="absolute inset-0 text-grim-cyan blur-[2px] opacity-70 animate-pulse-slow">COMMUNITY_GRID</span>
+              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-white via-grim-cyan to-grim-purple">
+                COMMUNITY_GRID
+              </span>
+            </h1>
+            <p className="text-sm md:text-base font-mono text-grim-cyan/60 max-w-2xl mx-auto uppercase tracking-wider border-l-2 border-r-2 border-grim-cyan/20 px-8 py-2">
+              Accessing Global Arsenal of Custom Configurations
+            </p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Gallery Grid */}
-      <section className="py-24 px-4 bg-gradient-to-b from-grim-dark to-grim-darker">
-        <div className="max-w-7xl mx-auto">
-          {/* Loading State */}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-grim-accent border-t-transparent mb-4"></div>
-              <p className="text-gray-400 text-lg">Loading designs...</p>
+        {/* Filters Section - Holo Bar */}
+        <section className="sticky top-20 z-40 py-6 px-4 backdrop-blur-sm border-b border-white/5 bg-grim-void/80">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-wrap justify-center gap-4">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`relative px-6 py-2 text-xs font-bold uppercase tracking-widest transition-all duration-300 clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px] ${selectedCategory === category
+                    ? 'bg-white !text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:bg-white hover:!text-black'
+                    : 'bg-grim-panel text-gray-500 hover:text-white hover:bg-white/5 border border-white/5 hover:border-grim-cyan/50'
+                    }`}
+                  style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
+                >
+                  {category}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
+        </section>
 
-          {/* Error State */}
-          {error && (
-            <div className="text-center py-20">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-500/10 rounded-full mb-4">
-                <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+        {/* Gallery Grid */}
+        <section className="py-12 px-4 min-h-[50vh]">
+          <div className="max-w-7xl mx-auto">
+            {/* Loading State */}
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-20 font-mono text-grim-cyan">
+                <div className="w-16 h-16 border-2 border-grim-cyan border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(0,240,255,0.3)]"></div>
+                <p className="animate-pulse">LOADING_DATA_STREAM...</p>
               </div>
-              <p className="text-red-400 text-xl mb-2">Failed to load designs</p>
-              <p className="text-gray-500 text-sm">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-6 px-6 py-3 bg-grim-accent text-black font-semibold rounded-lg hover:bg-grim-accent/90 transition-all"
-              >
-                Retry
-              </button>
-            </div>
-          )}
+            )}
 
-          {/* Gallery Grid */}
-          {!loading && !error && (
-            <>
-              <div className="gallery-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredDesigns.map((design) => (
-                  <DesignCard 
-                    key={design.id} 
-                    design={design} 
-                    onViewDetails={handleViewDetails}
-                    onLikeToggle={handleLikeUpdate}
-                    onAuthRequired={handleAuthRequired}
-                    isLikedByUser={likedDesigns.has(design.id)}
-                  />
-                ))}
+            {/* Error State */}
+            {error && (
+              <div className="text-center py-20 border border-grim-alert/30 bg-grim-alert/5 rounded-lg max-w-lg mx-auto p-8">
+                <div className="text-grim-alert text-4xl mb-4">⚠</div>
+                <p className="text-grim-alert font-mono text-xl mb-2">CONNECTION_FAILURE</p>
+                <p className="text-gray-500 text-xs font-mono mb-6">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-6 py-2 bg-grim-alert/20 hover:bg-grim-alert/40 text-grim-alert border border-grim-alert/50 font-bold uppercase tracking-widest text-xs transition-all"
+                >
+                  Re-Initialize
+                </button>
               </div>
+            )}
 
-              {filteredDesigns.length === 0 && (
-                <div className="text-center py-20">
-                  <p className="text-gray-400 text-xl">No designs found in this category.</p>
-                  <Link 
-                    to="/configurator"
-                    className="inline-block mt-6 px-6 py-3 bg-grim-accent text-black font-semibold rounded-lg hover:bg-grim-accent/90 transition-all"
-                  >
-                    Be the first to create one!
-                  </Link>
+            {/* Gallery Grid */}
+            {!loading && !error && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredDesigns.map((design) => (
+                    <DesignCard
+                      key={design.id}
+                      design={design}
+                      onViewDetails={handleViewDetails}
+                    />
+                  ))}
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-24 px-4 bg-grim-dark">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-display font-bold mb-6">
-            Ready to Create <span className="text-grim-accent">Your Own</span>?
-          </h2>
-          <p className="text-xl text-gray-300 mb-10">
-            Upload your design and see it come to life on premium keycaps.
-          </p>
-          <Link 
-            to="/configurator" 
-            className="inline-block px-12 py-6 bg-gradient-to-r from-grim-accent to-grim-blue text-grim-darker font-display font-bold text-xl rounded-lg hover:scale-110 hover:shadow-2xl hover:shadow-grim-accent/50 transition-all duration-300"
-          >
-            Start Designing
-          </Link>
-        </div>
-      </section>
+                {filteredDesigns.length === 0 && (
+                  <div className="text-center py-20 border border-white/5 bg-grim-panel/50 rounded-lg">
+                    <p className="text-gray-500 font-mono text-sm uppercase mb-6">NO_DATA_FOUND_IN_SECTOR</p>
+                    <Link
+                      to="/configurator"
+                      className="inline-block px-8 py-3 bg-grim-cyan text-black font-black uppercase tracking-widest text-xs hover:bg-white hover:shadow-[0_0_20px_rgba(0,240,255,0.5)] transition-all clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px]"
+                      style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
+                    >
+                      Initialize New Design
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-24 px-4 relative overflow-hidden">
+          <div className="absolute inset-0 bg-grim-purple/5 skew-y-3 transform origin-bottom-right pointer-events-none"></div>
+          <div className="max-w-4xl mx-auto text-center relative z-10">
+            <h2 className="text-3xl md:text-5xl font-display font-black mb-6 uppercase tracking-widest text-white">
+              <span className="text-grim-cyan">DEPLOY</span> YOUR OWN CONFIGURATION
+            </h2>
+            <p className="text-sm font-mono text-gray-400 mb-10 max-w-xl mx-auto">
+              UPLOAD_DESIGN // CUSTOMIZE_KEYS // EXPORT_SCHEMATIC
+            </p>
+            <Link
+              to="/configurator"
+              className="inline-block px-12 py-4 bg-transparent border border-grim-purple text-grim-purple font-display font-bold text-lg uppercase tracking-widest hover:bg-grim-purple hover:text-black hover:shadow-[0_0_30px_rgba(176,38,255,0.4)] transition-all duration-300 clip-path-polygon-[20px_0,100%_0,100%_calc(100%-20px),calc(100%-20px)_100%,0_100%,0_20px]"
+              style={{ clipPath: 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)' }}
+            >
+              Start System
+            </Link>
+          </div>
+        </section>
+      </div>
 
       {/* View Details Modal */}
       {selectedDesign && (
@@ -315,17 +275,6 @@ export default function GalleryPage() {
           onClose={() => setSelectedDesign(null)}
           onCopyToConfigurator={() => handleCopyToConfigurator(selectedDesign)}
           onLikeUpdate={handleLikeUpdate}
-          currentLikeState={likedDesigns.has(selectedDesign.id)}
-          onAuthRequired={handleAuthRequired}
-        />
-      )}
-
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          defaultTab="signin"
         />
       )}
     </div>

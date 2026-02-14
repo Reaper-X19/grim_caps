@@ -4,21 +4,21 @@ import { useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import { Model as KeyboardGLTF } from './Keyboard'
 import useConfiguratorStore from '../../store/configuratorStore'
-import { 
-  createKeycapMaterial, 
-  updateKeycapMaterial, 
-  calculateKeysBoundingBox 
+import {
+  createKeycapMaterial,
+  updateKeycapMaterial,
+  calculateKeysBoundingBox
 } from '../../shaders/KeycapShader'
 
 export default function KeyboardModel() {
   const groupRef = useRef()
   const { camera, raycaster, pointer, gl } = useThree()
-  
+
   // Store for material references and textures
   const materialsRef = useRef(new Map())
   const texturesRef = useRef(new Map())
   const originalMaterialsRef = useRef(new Map()) // Store original materials from GLTF
-  
+
   // Get state from store
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
   const selectionLocked = useConfiguratorStore((state) => state.selectionLocked)
@@ -26,16 +26,17 @@ export default function KeyboardModel() {
   const keyCustomizations = useConfiguratorStore((state) => state.keyCustomizations)
   const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
   const layers = useConfiguratorStore((state) => state.layers)
-  
+
   const toggleKeySelection = useConfiguratorStore((state) => state.toggleKeySelection)
   const setSelectedKeys = useConfiguratorStore((state) => state.setSelectedKeys)
-  
+  const updateLayer = useConfiguratorStore((state) => state.updateLayer)
+
   // Get active layer
-  const activeLayer = useMemo(() => 
+  const activeLayer = useMemo(() =>
     layers.find(l => l.id === activeLayerId),
     [layers, activeLayerId]
   )
-  
+
   // Load texture for active layer
   const activeTexture = useTexture(
     activeLayer?.textureUrl || '/placeholder.png',
@@ -44,64 +45,69 @@ export default function KeyboardModel() {
       texture.wrapT = THREE.ClampToEdgeWrapping
     }
   )
-  
+
   // Handle click on keyboard
   useEffect(() => {
     const handleClick = (event) => {
       if (event.target !== gl.domElement) return
-      
+
       // Only allow selection when in selection mode and not locked
       if (!selectionMode || selectionLocked) return
-      
+
       raycaster.setFromCamera(pointer, camera)
-      
+
       if (!groupRef.current) return
-      
+
       const intersects = raycaster.intersectObjects(groupRef.current.children, true)
-      
+
       if (intersects.length > 0) {
         const keycap = intersects.find(hit => hit.object.name && hit.object.name.startsWith('K_'))
-        
+
         if (keycap) {
           const keyName = keycap.object.name
-          
+
           // Always use toggle behavior for intuitive on/off clicking
           toggleKeySelection(keyName)
-          
+
           event.stopPropagation()
         }
       }
     }
-    
+
     gl.domElement.addEventListener('click', handleClick)
-    
+
     return () => {
       gl.domElement.removeEventListener('click', handleClick)
     }
   }, [camera, raycaster, pointer, gl, toggleKeySelection, selectionMode, selectionLocked])
-  
+
   // Apply materials and real-time updates
   useEffect(() => {
     if (!groupRef.current) return
-    
+
     // Calculate bounding box for selected keys (for live preview)
     const selectedBounds = calculateKeysBoundingBox(groupRef.current, selectedKeys)
-    
+
+    // Store bounding box in active layer for persistence
+    if (selectedKeys.length > 0 && activeLayerId) {
+      updateLayer(activeLayerId, { boundingBox: selectedBounds })
+    }
+
     groupRef.current.traverse((child) => {
       if (child.isMesh && child.name && child.name.startsWith('K_')) {
         const keyName = child.name
-        
+
         // Store original material on first encounter
         if (!originalMaterialsRef.current.has(keyName)) {
           originalMaterialsRef.current.set(keyName, child.material.clone())
         }
-        
+
         // Check if key is selected
         const isSelected = selectedKeys.includes(keyName)
-        
+
         // Check if key has customization
         const customization = keyCustomizations[keyName]
-        
+
         // Determine what to apply
         let shouldUseShader = false
         let textureToUse = null
@@ -113,18 +119,20 @@ export default function KeyboardModel() {
           rotation: 0
         }
         let boundsToUse = selectedBounds
-        
+
         // Priority 1: Key has customization (applied)
         if (customization) {
           shouldUseShader = true
           baseColor = customization.baseColor || '#ffffff'
           transforms = customization.textureTransform || transforms
-          
-          // CRITICAL: Use the keyGroup to calculate bounding box for unified mapping
-          if (customization.keyGroup && customization.keyGroup.length > 0) {
+
+          // Use saved bounding box if available, otherwise calculate from keyGroup
+          if (customization.boundingBox) {
+            boundsToUse = customization.boundingBox
+          } else if (customization.keyGroup && customization.keyGroup.length > 0) {
             boundsToUse = calculateKeysBoundingBox(groupRef.current, customization.keyGroup)
           }
-          
+
           // Load texture if exists
           if (customization.textureUrl) {
             // Check if we already have this texture loaded
@@ -134,7 +142,7 @@ export default function KeyboardModel() {
                 texture.wrapS = THREE.ClampToEdgeWrapping
                 texture.wrapT = THREE.ClampToEdgeWrapping
                 texturesRef.current.set(customization.textureUrl, texture)
-                
+
                 // Update all materials using this texture
                 materialsRef.current.forEach((material, key) => {
                   const keyCustom = keyCustomizations[key]
@@ -156,12 +164,12 @@ export default function KeyboardModel() {
           textureToUse = activeLayer.textureUrl ? activeTexture : null
           boundsToUse = selectedBounds
         }
-        
+
         // Apply shader material
         if (shouldUseShader) {
           // Create or update shader material
           let material = materialsRef.current.get(keyName)
-          
+
           if (!material || !material.isShaderMaterial) {
             // Create new shader material
             material = createKeycapMaterial({
@@ -176,7 +184,7 @@ export default function KeyboardModel() {
               emissive: (isSelected && selectionMode && !selectionLocked) ? new THREE.Color('#00ffcc') : new THREE.Color('#000000'),
               emissiveIntensity: (isSelected && selectionMode && !selectionLocked) ? 0.3 : 0,
             })
-            
+
             child.material = material
             materialsRef.current.set(keyName, material)
           } else {
@@ -197,7 +205,7 @@ export default function KeyboardModel() {
         } else {
           // No customization or selection - restore original material
           // CRITICAL: Restore original material to preserve keycap colors
-          
+
           if (child.material.isShaderMaterial) {
             // If currently using shader material, restore original
             const originalMaterial = originalMaterialsRef.current.get(keyName)
@@ -207,7 +215,7 @@ export default function KeyboardModel() {
               materialsRef.current.delete(keyName)
             }
           }
-          
+
           // Apply selection highlight ONLY if in active selection mode (not locked)
           if (isSelected && selectionMode && !selectionLocked) {
             // Ensure we have a cloned material to modify
@@ -232,29 +240,29 @@ export default function KeyboardModel() {
             }
           }
         }
-        
+
         // Enable shadows
         child.castShadow = true
         child.receiveShadow = true
-        
+
         child.material.needsUpdate = true
       }
     })
   }, [
-    selectedKeys, 
-    keyCustomizations, 
-    activeLayer?.baseColor, 
+    selectedKeys,
+    keyCustomizations,
+    activeLayer?.baseColor,
     activeLayer?.textureUrl,
     activeLayer?.textureTransform,
     activeTexture,
     selectionMode,
     selectionLocked
   ])
-  
+
   return (
-    <group 
-      ref={groupRef} 
-      scale={12} 
+    <group
+      ref={groupRef}
+      scale={12}
       position={[0, 0, 0]}
       rotation={[-0.3, 0, 0]}
     >
