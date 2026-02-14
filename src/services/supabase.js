@@ -226,6 +226,132 @@ export async function fetchGalleryDesigns({
 }
 
 /**
+ * Toggle like status for a design (like or unlike)
+ * Requires authenticated user
+ * @param {string} designId - Design ID
+ * @param {string} userId - User ID from auth
+ * @param {boolean} isCurrentlyLiked - Current like status
+ * @returns {Promise<Object>} Updated like status
+ */
+export async function toggleLike(designId, userId, isCurrentlyLiked) {
+  console.log('toggleLike called:', { designId, userId, isCurrentlyLiked })
+  
+  if (!userId) {
+    throw new Error('User must be authenticated to like designs')
+  }
+
+  try {
+    if (isCurrentlyLiked) {
+      // Unlike: Remove from design_likes and decrement count
+      console.log('Attempting to unlike...')
+      const { data: deleteData, error: deleteError } = await supabase
+        .from('design_likes')
+        .delete()
+        .eq('user_id', userId)
+        .eq('design_id', designId)
+
+      console.log('Delete result:', { deleteData, deleteError })
+      if (deleteError) throw deleteError
+
+      // Decrement the likes count
+      console.log('Decrementing like count...')
+      const { data: rpcData, error: rpcError } = await supabase.rpc('decrement_likes', {
+        design_id_param: designId
+      })
+
+      console.log('Decrement RPC result:', { rpcData, rpcError })
+      if (rpcError) throw rpcError
+
+      console.log('Unlike successful')
+      return { liked: false }
+    } else {
+      // Like: Insert into design_likes and increment count
+      console.log('Attempting to like...')
+      const { data: insertData, error: insertError } = await supabase
+        .from('design_likes')
+        .insert([
+          {
+            user_id: userId,
+            design_id: designId
+          }
+        ])
+
+      console.log('Insert result:', { insertData, insertError })
+      
+      if (insertError) {
+        // If already exists (race condition), just return success
+        if (insertError.code === '23505') {
+          console.log('Like already exists (race condition)')
+          return { liked: true }
+        }
+        throw insertError
+      }
+
+      // Increment the likes count
+      console.log('Incrementing like count...')
+      const { data: rpcData, error: rpcError } = await supabase.rpc('increment_likes', {
+        design_id_param: designId
+      })
+
+      console.log('Increment RPC result:', { rpcData, rpcError })
+      if (rpcError) throw rpcError
+
+      console.log('Like successful')
+      return { liked: true }
+    }
+  } catch (error) {
+    console.error('Error toggling like:', error)
+    throw new Error(`Failed to toggle like: ${error.message}`)
+  }
+}
+
+/**
+ * Check if user has liked a design
+ * @param {string} designId - Design ID
+ * @param {string} userId - User ID
+ * @returns {Promise<boolean>} True if user has liked this design
+ */
+export async function hasUserLiked(designId, userId) {
+  if (!userId) return false
+
+  const { data, error } = await supabase
+    .from('design_likes')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('design_id', designId)
+    .single()
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error checking like status:', error)
+    return false
+  }
+
+  return !!data
+}
+
+/**
+ * Get all design IDs that user has liked
+ * @param {string} userId - User ID
+ * @returns {Promise<Set<string>>} Set of liked design IDs
+ */
+export async function getUserLikedDesigns(userId) {
+  if (!userId) return new Set()
+
+  const { data, error } = await supabase
+    .from('design_likes')
+    .select('design_id')
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error fetching user likes:', error)
+    return new Set()
+  }
+
+  return new Set(data.map(like => like.design_id))
+}
+
+/**
+ * @deprecated Use toggleLike instead
  * Increment like count for a design
  * @param {string} designId - Design ID
  * @returns {Promise<Object>} Updated design
@@ -242,6 +368,7 @@ export async function likeDesign(designId) {
 
   return data
 }
+
 
 /**
  * Increment copy count for a design
@@ -432,7 +559,10 @@ export default {
   
   // Gallery
   fetchGalleryDesigns,
-  likeDesign,
+  likeDesign, // deprecated
+  toggleLike,
+  hasUserLiked,
+  getUserLikedDesigns,
   incrementCopyCount,
   
   // Images

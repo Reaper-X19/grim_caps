@@ -1,35 +1,70 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Heart, Copy, ShoppingCart, Eye } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import useCartStore from '../../store/cartStore'
 import useConfiguratorStore from '../../store/configuratorStore'
-import { likeDesign, incrementCopyCount } from '../../services/supabase'
+import useAuthStore from '../../store/authStore'
+import { toggleLike, incrementCopyCount } from '../../services/supabase'
 import { formatPrice } from '../../utils/pricing'
 
-export default function DesignCard({ design, onViewDetails }) {
+export default function DesignCard({ design, onViewDetails, onLikeToggle, onAuthRequired, isLikedByUser }) {
   const navigate = useNavigate()
   const addDesign = useCartStore(state => state.addDesign)
   const isInCart = useCartStore(state => state.isInCart(design.id))
+  const user = useAuthStore(state => state.user)
   
-  const [liked, setLiked] = useState(false)
+  const [liked, setLiked] = useState(isLikedByUser || false)
   const [likesCount, setLikesCount] = useState(design.likes_count || 0)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
+  // Sync liked state when prop changes
+  useEffect(() => {
+    setLiked(isLikedByUser || false)
+  }, [isLikedByUser])
+
+  // Sync likes count when design prop changes
+  useEffect(() => {
+    setLikesCount(design.likes_count || 0)
+  }, [design.likes_count])
+
   const handleLike = async (e) => {
     e.stopPropagation()
-    if (liked) return // Prevent multiple likes
+    
+    console.log('DesignCard handleLike:', { user, userId: user?.id, liked, designId: design.id })
+    
+    // Check authentication
+    if (!user) {
+      if (onAuthRequired) {
+        onAuthRequired()
+      }
+      return
+    }
     
     try {
-      await likeDesign(design.id)
-      setLiked(true)
-      setLikesCount(prev => prev + 1)
+      await toggleLike(design.id, user.id, liked)
+      const newLikedState = !liked
+      setLiked(newLikedState)
+      setLikesCount(prev => newLikedState ? prev + 1 : prev - 1)
+      
+      // Notify parent component
+      if (onLikeToggle) {
+        onLikeToggle(design.id, newLikedState)
+      }
     } catch (error) {
-      console.error('Error liking design:', error)
+      console.error('Error toggling like:', error)
     }
   }
 
   const handleCopyToConfigurator = async (e) => {
     e.stopPropagation()
+    
+    // Check authentication
+    if (!user) {
+      if (onAuthRequired) {
+        onAuthRequired()
+      }
+      return
+    }
     
     try {
       // Increment copy count
@@ -175,10 +210,10 @@ export default function DesignCard({ design, onViewDetails }) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleLike}
-              disabled={liked}
               className={`flex items-center gap-1 transition-colors ${
                 liked ? 'text-red-500' : 'text-gray-400 hover:text-red-400'
               }`}
+              title={user ? (liked ? 'Unlike' : 'Like') : 'Sign in to like'}
             >
               <Heart className={`w-4 h-4 ${liked ? 'fill-current' : ''}`} />
               <span>{likesCount}</span>
