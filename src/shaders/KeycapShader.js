@@ -53,8 +53,10 @@ const fragmentShader = `
       uv = (uv - 0.5) / uZoom + 0.5;
       
       // Apply position offset (scaled down for minor adjustments)
-      // Slider values are -10 to 10, we scale by 0.01 to get -0.1 to 0.1
-      uv += uOffset * 0.01;
+      // X: subtract so positive = move texture right visually
+      // Y: add because the uv.y flip (1.0 - uv.y) above inverts the Y direction
+      uv.x -= uOffset.x * 0.01;
+      uv.y += uOffset.y * 0.01;
       
       // Apply rotation around center
       if (uRotation != 0.0) {
@@ -67,10 +69,11 @@ const fragmentShader = `
         ) + 0.5;
       }
       
-      // Clamp UV coordinates to prevent repetition (0-1 range only)
+      // Clamp UV coordinates to 0-1 range to prevent gaps
+      // This ensures texture always covers the keyboard surface
       uv = clamp(uv, 0.0, 1.0);
       
-      // Sample texture only if within valid bounds
+      // Sample texture
       vec4 texColor = texture2D(uTexture, uv);
       
       // Mix texture with base color
@@ -205,9 +208,9 @@ export function calculateKeysBoundingBox(keyboardGroup, keyNames) {
       if (!child.geometry.boundingBox) {
         child.geometry.computeBoundingBox()
       }
-      
+
       const bbox = child.geometry.boundingBox
-      
+
       // Transform the 8 corners of the bounding box to world space
       const corners = [
         new THREE.Vector3(bbox.min.x, bbox.min.y, bbox.min.z),
@@ -219,7 +222,7 @@ export function calculateKeysBoundingBox(keyboardGroup, keyNames) {
         new THREE.Vector3(bbox.max.x, bbox.max.y, bbox.min.z),
         new THREE.Vector3(bbox.max.x, bbox.max.y, bbox.max.z),
       ]
-      
+
       // Transform each corner to world space and update bounds
       corners.forEach(corner => {
         const worldCorner = corner.applyMatrix4(child.matrixWorld)
