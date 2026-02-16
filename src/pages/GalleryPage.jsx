@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { fetchGalleryDesigns, incrementCopyCount } from '../services/supabase'
+import { fetchGalleryDesigns, incrementCopyCount, getUserLikedDesigns } from '../services/supabase'
 import DesignCard from '../components/gallery/DesignCard'
 import ViewDetailsModal from '../components/gallery/ViewDetailsModal'
+import AuthModal from '../components/auth/AuthModal'
 import useConfiguratorStore from '../store/configuratorStore'
+import useAuthStore from '../store/authStore'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -18,6 +20,9 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedDesign, setSelectedDesign] = useState(null)
+  const [likedDesigns, setLikedDesigns] = useState(new Set())
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const user = useAuthStore(state => state.user)
 
   // Fetch designs from Supabase
   useEffect(() => {
@@ -43,6 +48,35 @@ export default function GalleryPage() {
     fetchDesigns()
   }, [])
 
+  // Load user's liked designs on mount and when user changes
+  useEffect(() => {
+    async function loadUserLikes() {
+      if (user) {
+        try {
+          const likedSet = await getUserLikedDesigns(user.id)
+          setLikedDesigns(likedSet)
+        } catch (err) {
+          console.error('Error loading user likes:', err)
+        }
+      } else {
+        setLikedDesigns(new Set())
+      }
+    }
+    
+    loadUserLikes()
+  }, [user])
+
+  // Sync selectedDesign with designs array when it changes
+  // This ensures the modal shows updated like counts immediately
+  useEffect(() => {
+    if (selectedDesign) {
+      const updatedDesign = designs.find(d => d.id === selectedDesign.id)
+      if (updatedDesign && updatedDesign.likes_count !== selectedDesign.likes_count) {
+        setSelectedDesign(updatedDesign)
+      }
+    }
+  }, [designs, selectedDesign])
+
   const categories = ['all', 'popular', 'recent', 'most-liked']
 
   const filteredDesigns = selectedCategory === 'all' 
@@ -59,20 +93,41 @@ export default function GalleryPage() {
     setSelectedDesign(design)
   }
 
-  const handleLikeUpdate = async (designId) => {
-    // Refresh the designs list to get updated like count
-    try {
-      const data = await fetchGalleryDesigns({
-        limit: 50,
-        sortBy: 'created_at'
-      })
-      setDesigns(data || [])
-    } catch (err) {
-      console.error('Error refreshing designs:', err)
-    }
+  const handleAuthRequired = () => {
+    setShowAuthModal(true)
+  }
+
+  const handleLikeUpdate = (designId, isLiked) => {
+    // Update local liked designs set
+    setLikedDesigns(prev => {
+      const newSet = new Set(prev)
+      if (isLiked) {
+        newSet.add(designId)
+      } else {
+        newSet.delete(designId)
+      }
+      return newSet
+    })
+
+    // Update the design in the designs array (optimistic update)
+    setDesigns(prev => prev.map(design => {
+      if (design.id === designId) {
+        return {
+          ...design,
+          likes_count: isLiked ? (design.likes_count || 0) + 1 : Math.max(0, (design.likes_count || 0) - 1)
+        }
+      }
+      return design
+    }))
   }
 
   const handleCopyToConfigurator = async (design) => {
+    // Check authentication
+    if (!user) {
+      setShowAuthModal(true)
+      return
+    }
+
     try {
       // Check if texture URL exists and is valid
       if (!design.texture_url || design.texture_url.startsWith('blob:')) {
@@ -102,10 +157,10 @@ export default function GalleryPage() {
       }
       
       // Set texture transform
-      if (design.texture_config) {
+      if (design.texture_settings) {
         configuratorStore.updateTextureTransform(
           configuratorStore.activeLayerId,
-          design.texture_config
+          design.texture_settings
         )
       }
       
@@ -119,11 +174,13 @@ export default function GalleryPage() {
         configuratorStore.setSelectedKeys(design.selected_keys)
       }
       
-      // Close modal and navigate
-      setSelectedDesign(null)
+      // Navigate to configurator
       navigate('/configurator')
+      
+      // Close modal if open
+      setSelectedDesign(null)
     } catch (error) {
-      console.error('Error copying to configurator:', error)
+      console.error('Error copying design:', error)
       alert('Failed to copy design. Please try again.')
     }
   }
@@ -210,6 +267,9 @@ export default function GalleryPage() {
                     key={design.id} 
                     design={design} 
                     onViewDetails={handleViewDetails}
+                    onLikeToggle={handleLikeUpdate}
+                    onAuthRequired={handleAuthRequired}
+                    isLikedByUser={likedDesigns.has(design.id)}
                   />
                 ))}
               </div>
@@ -255,6 +315,17 @@ export default function GalleryPage() {
           onClose={() => setSelectedDesign(null)}
           onCopyToConfigurator={() => handleCopyToConfigurator(selectedDesign)}
           onLikeUpdate={handleLikeUpdate}
+          currentLikeState={likedDesigns.has(selectedDesign.id)}
+          onAuthRequired={handleAuthRequired}
+        />
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          defaultTab="signin"
         />
       )}
     </div>
