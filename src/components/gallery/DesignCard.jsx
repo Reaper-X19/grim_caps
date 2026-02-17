@@ -6,23 +6,47 @@ import useConfiguratorStore from '../../store/configuratorStore'
 import { likeDesign, incrementCopyCount } from '../../services/supabase'
 import { formatPrice } from '../../utils/pricing'
 
-export default function DesignCard({ design, onViewDetails }) {
+export default function DesignCard({ 
+  design, 
+  onViewDetails, 
+  onLikeToggle, 
+  onAuthRequired, 
+  isLikedByUser = false 
+}) {
   const navigate = useNavigate()
   const addDesign = useCartStore(state => state.addDesign)
   const isInCart = useCartStore(state => state.isInCart(design.id))
 
-  const [liked, setLiked] = useState(false)
+  const [liked, setLiked] = useState(isLikedByUser)
   const [likesCount, setLikesCount] = useState(design.likes_count || 0)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
   const handleLike = async (e) => {
     e.stopPropagation()
-    if (liked) return // Prevent multiple likes
+    
+    // If auth callbacks provided, use them (from GalleryPage)
+    if (onLikeToggle && onAuthRequired) {
+      // Check if user is authenticated via parent component
+      if (!isLikedByUser && onAuthRequired) {
+        // This will be handled by parent - just call the callback
+        onLikeToggle(design.id, !liked)
+        setLiked(!liked)
+        return
+      }
+    }
+    
+    // Fallback to local like logic (for standalone use)
+    if (liked) return
 
     try {
       await likeDesign(design.id)
       setLiked(true)
       setLikesCount(prev => prev + 1)
+      
+      // Notify parent if callback exists
+      if (onLikeToggle) {
+        onLikeToggle(design.id, true)
+      }
     } catch (error) {
       console.error('Error liking design:', error)
     }
