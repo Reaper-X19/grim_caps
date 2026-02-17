@@ -48,9 +48,10 @@ export default function GalleryPage() {
   // Load user's liked designs
   useEffect(() => {
     async function loadUserLikes() {
-      if (user) {
+      const currentUser = useAuthStore.getState().user
+      if (currentUser) {
         try {
-          const likedSet = await getUserLikedDesigns(user.id)
+          const likedSet = await getUserLikedDesigns(currentUser.id)
           setLikedDesigns(likedSet)
         } catch (err) {
           console.error('Error loading user likes:', err)
