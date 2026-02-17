@@ -15,7 +15,8 @@ export default function DesignCard({
 }) {
   const navigate = useNavigate()
   const addDesign = useCartStore(state => state.addDesign)
-  const isInCart = useCartStore(state => state.isInCart(design.id))
+  const cartItems = useCartStore(state => state.items)
+  const isInCart = cartItems.some(item => item.designId === design.id)
 
   const [liked, setLiked] = useState(isLikedByUser)
   const [likesCount, setLikesCount] = useState(design.likes_count || 0)
