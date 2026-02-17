@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { fetchGalleryDesigns, incrementCopyCount } from '../services/supabase'
+import { fetchGalleryDesigns, incrementCopyCount, getUserLikedDesigns } from '../services/supabase'
 import DesignCard from '../components/gallery/DesignCard'
 import ViewDetailsModal from '../components/gallery/ViewDetailsModal'
+import AuthModal from '../components/auth/AuthModal'
 import useConfiguratorStore from '../store/configuratorStore'
+import useAuthStore from '../store/authStore'
 
 gsap.registerPlugin(ScrollTrigger)
 
