@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { likeDesign } from '../../services/supabase'
 import useCartStore from '../../store/cartStore'
 
-export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator, onLikeUpdate }) {
-  const [liked, setLiked] = useState(false)
+export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator, onLikeUpdate, currentLikeState, onAuthRequired }) {
+  const [liked, setLiked] = useState(currentLikeState || false)
   const addDesign = useCartStore(state => state.addDesign)
-  const isInCart = useCartStore(state => state.isInCart(design.id))
+  const cartItems = useCartStore(state => state.items)
+  const isInCart = cartItems.some(item => item.designId === design.id)
 
   const handleLike = async () => {
     if (liked) return
