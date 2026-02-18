@@ -252,7 +252,9 @@ const useConfiguratorStore = create((set, get) => ({
         textureUrl: activeLayer.textureUrl,
         baseColor: activeLayer.baseColor,
         textureTransform: { ...activeLayer.textureTransform },
-        boundingBox: activeLayer.boundingBox, // Save bounding box for consistent texture mapping
+        // Fix: Do NOT use activeLayer.boundingBox as it might be stale due to race conditions.
+        // Instead, set to null to force KeyboardModel to calculate it fresh from keyGroup.
+        boundingBox: null,
         // Store the group of keys this belongs to for unified texture mapping
         keyGroup: selectedKeysList
       }
@@ -283,7 +285,9 @@ const useConfiguratorStore = create((set, get) => ({
     })
     return {
       keyCustomizations: newCustomizations,
-      selectedKeys: []
+      selectedKeys: [],
+      selectionLocked: false, // Fix: Unlock selection so user can select again
+      selectionMode: false    // Fix: Reset mode
     }
   }),
 

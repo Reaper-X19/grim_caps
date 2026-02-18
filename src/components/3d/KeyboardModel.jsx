@@ -17,6 +17,7 @@ export default function KeyboardModel() {
   const materialsRef = useRef(new Map())
   const texturesRef = useRef(new Map())
   const originalMaterialsRef = useRef(new Map()) // Store original materials from GLTF
+  const boundingBoxCache = useRef(new WeakMap()) // Cache for calculated bounding boxes
 
   // Get state from store
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
@@ -148,11 +149,18 @@ export default function KeyboardModel() {
           baseColor = customization.baseColor || '#ffffff'
           transforms = customization.textureTransform || transforms
 
-          // Use saved bounding box if available, otherwise calculate from keyGroup
+          // Use saved bounding box if available, otherwise calculate from keyGroup with caching
           if (customization.boundingBox) {
             boundsToUse = customization.boundingBox
           } else if (customization.keyGroup && customization.keyGroup.length > 0) {
-            boundsToUse = calculateKeysBoundingBox(groupRef.current, customization.keyGroup)
+            // Check cache first to avoid expensive recalculation every frame
+            const groupRef = customization.keyGroup
+            if (boundingBoxCache.current.has(groupRef)) {
+              boundsToUse = boundingBoxCache.current.get(groupRef)
+            } else {
+              boundsToUse = calculateKeysBoundingBox(groupRef.current, customization.keyGroup)
+              boundingBoxCache.current.set(groupRef, boundsToUse)
+            }
           }
 
           // Load texture if exists

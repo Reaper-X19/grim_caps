@@ -82,8 +82,8 @@ export default function DraggableTexturePreview({
 
     // Clamp bounds: at zoom=1, no movement allowed. As zoom increases, allow more movement
     // Calculate max position based on zoom to prevent texture from creating gaps
-    // The formula: (zoom - 1) * 25 means at 2x zoom you can move ±25%, at 3x zoom ±50%
-    const maxPosition = Math.max(0, (zoom - 1) * 25)
+    // The formula: 50 * (1 - 1/zoom) ensures UVs never go outside 0-1
+    const maxPosition = 50 * (1 - 1 / zoom)
     const clampedX = Math.max(-maxPosition, Math.min(maxPosition, newX))
     const clampedY = Math.max(-maxPosition, Math.min(maxPosition, newY))
 
