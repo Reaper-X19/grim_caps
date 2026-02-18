@@ -423,6 +423,35 @@ const useConfiguratorStore = create((set, get) => ({
   setLoadedDesign: (designId, meta) => set({
     loadedDesignId: designId,
     loadedDesignMeta: meta
+  }),
+  // Reset store to initial state
+  reset: () => set({
+    layers: [
+      {
+        id: 'layer-1',
+        name: 'Set 1',
+        selectedKeys: [],
+        texture: null,
+        textureUrl: null,
+        baseColor: '#ffffff',
+        textureTransform: {
+          zoom: 1,
+          positionX: 0,
+          positionY: 0,
+          rotation: 0
+        },
+        boundingBox: null,
+        visible: true
+      }
+    ],
+    activeLayerId: 'layer-1',
+    selectedKeys: [],
+    selectionLocked: false,
+    selectionMode: false,
+    keyCustomizations: {},
+    copiedStyle: null,
+    loadedDesignId: null,
+    loadedDesignMeta: null
   })
 }))
 
