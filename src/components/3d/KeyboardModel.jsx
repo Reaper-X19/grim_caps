@@ -1,7 +1,6 @@
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
-import { useTexture } from '@react-three/drei'
 import { Model as KeyboardGLTF } from './Keyboard'
 import useConfiguratorStore from '../../store/configuratorStore'
 import {
@@ -37,14 +36,37 @@ export default function KeyboardModel() {
     [layers, activeLayerId]
   )
 
-  // Load texture for active layer
-  const activeTexture = useTexture(
-    activeLayer?.textureUrl || '/placeholder.png',
-    (texture) => {
-      texture.wrapS = THREE.ClampToEdgeWrapping
-      texture.wrapT = THREE.ClampToEdgeWrapping
+  // Manually load active layer texture — avoids useTexture hook which causes
+  // WebGL context loss on hard reload due to race conditions with placeholder loading
+  const [activeTexture, setActiveTexture] = useState(null)
+  const activeTextureUrlRef = useRef(null)
+
+  useEffect(() => {
+    const url = activeLayer?.textureUrl
+    if (!url) {
+      setActiveTexture(null)
+      activeTextureUrlRef.current = null
+      return
     }
-  )
+    // Skip reload if same URL
+    if (url === activeTextureUrlRef.current) return
+    activeTextureUrlRef.current = url
+
+    const loader = new THREE.TextureLoader()
+    loader.load(
+      url,
+      (texture) => {
+        texture.wrapS = THREE.ClampToEdgeWrapping
+        texture.wrapT = THREE.ClampToEdgeWrapping
+        setActiveTexture(texture)
+      },
+      undefined,
+      (err) => {
+        console.warn('Failed to load active layer texture:', err)
+        setActiveTexture(null)
+      }
+    )
+  }, [activeLayer?.textureUrl])
 
   // Handle click on keyboard
   useEffect(() => {
@@ -161,7 +183,7 @@ export default function KeyboardModel() {
           shouldUseShader = true
           baseColor = activeLayer.baseColor || '#ffffff'
           transforms = activeLayer.textureTransform || transforms
-          textureToUse = activeLayer.textureUrl ? activeTexture : null
+          textureToUse = (activeLayer.textureUrl && activeTexture) ? activeTexture : null
           boundsToUse = selectedBounds
         }
 

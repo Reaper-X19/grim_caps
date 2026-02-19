@@ -9,61 +9,32 @@ import useConfiguratorStore from '../../store/configuratorStore'
  * - Simple drag-to-reposition
  * - Scroll-to-zoom
  */
-export default function DraggableTexturePreview({ 
-  textureUrl, 
-  zoom, 
-  positionX, 
+export default function DraggableTexturePreview({
+  textureUrl,
+  zoom,
+  positionX,
   positionY,
   minZoom = 1.0,
   onPositionChange,
-  onZoomChange 
+  onZoomChange
 }) {
   const containerRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, startX: 0, startY: 0 })
-  
+
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
+  const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
+  const activeLayer = useConfiguratorStore((state) =>
+    state.layers.find(layer => layer.id === activeLayerId)
+  )
 
-  // Parse key positions to get bounding box
-  const getKeysBoundingBox = () => {
-    if (selectedKeys.length === 0) return null
-    
-    const keyPositions = selectedKeys.map(key => {
-      const match = key.match(/K_/)
-      if (match) {
-        // Simple position estimation based on key name
-        const keyMap = {
-          'K_W': { row: 2, col: 2 },
-          'K_A': { row: 3, col: 1 },
-          'K_S': { row: 3, col: 2 },
-          'K_D': { row: 3, col: 3 },
-          'K_ARROWUP': { row: 4, col: 12 },
-          'K_ARROWDOWN': { row: 5, col: 12 },
-          'K_ARROWLEFT': { row: 5, col: 11 },
-          'K_ARROWRIGHT': { row: 5, col: 13 },
-        }
-        return keyMap[key] || { row: 3, col: 5 }
-      }
-      return { row: 3, col: 5 }
-    }).filter(Boolean)
-    
-    if (keyPositions.length === 0) return null
-    
-    const rows = keyPositions.map(k => k.row)
-    const cols = keyPositions.map(k => k.col)
-    
-    return {
-      minRow: Math.min(...rows),
-      maxRow: Math.max(...rows),
-      minCol: Math.min(...cols),
-      maxCol: Math.max(...cols),
-      width: Math.max(...cols) - Math.min(...cols) + 1,
-      height: Math.max(...rows) - Math.min(...rows) + 1
-    }
-  }
+  // Get actual bounding box from the layer (calculated from real 3D geometry)
+  const boundingBox = activeLayer?.boundingBox
 
-  const bbox = getKeysBoundingBox()
-  const aspectRatio = bbox ? bbox.width / bbox.height : 1
+  // Calculate aspect ratio from actual 3D bounds (XZ plane)
+  const aspectRatio = boundingBox
+    ? (boundingBox.max.x - boundingBox.min.x) / (boundingBox.max.y - boundingBox.min.y)
+    : 16 / 9 // Default to landscape if no bounds yet
 
   if (!textureUrl) {
     return (
@@ -79,10 +50,10 @@ export default function DraggableTexturePreview({
   const handlePointerDown = (e) => {
     e.preventDefault()
     setIsDragging(true)
-    
+
     const clientX = e.clientX || e.touches?.[0]?.clientX || 0
     const clientY = e.clientY || e.touches?.[0]?.clientY || 0
-    
+
     setDragStart({
       x: clientX,
       y: clientY,
@@ -94,20 +65,28 @@ export default function DraggableTexturePreview({
   const handlePointerMove = (e) => {
     if (!isDragging) return
     e.preventDefault()
-    
+
     const clientX = e.clientX || e.touches?.[0]?.clientX || 0
     const clientY = e.clientY || e.touches?.[0]?.clientY || 0
-    
-    const deltaX = (clientX - dragStart.x) * 0.5
-    const deltaY = (clientY - dragStart.y) * 0.5
-    
+
+    // Convert pixel deltas to percentage of container size
+    const container = containerRef.current
+    const containerWidth = container ? container.offsetWidth : 300
+    const containerHeight = container ? container.offsetHeight : 300
+
+    const deltaX = ((clientX - dragStart.x) / containerWidth) * 100 * 0.5
+    const deltaY = ((clientY - dragStart.y) / containerHeight) * 100 * 0.5
+
     const newX = dragStart.startX + deltaX
     const newY = dragStart.startY + deltaY
-    
-    const maxPosition = 50 * zoom
+
+    // Clamp bounds: at zoom=1, no movement allowed. As zoom increases, allow more movement
+    // Calculate max position based on zoom to prevent texture from creating gaps
+    // The formula: (zoom - 1) * 25 means at 2x zoom you can move ±25%, at 3x zoom ±50%
+    const maxPosition = Math.max(0, (zoom - 1) * 25)
     const clampedX = Math.max(-maxPosition, Math.min(maxPosition, newX))
     const clampedY = Math.max(-maxPosition, Math.min(maxPosition, newY))
-    
+
     onPositionChange(clampedX, clampedY)
   }
 
@@ -137,12 +116,12 @@ export default function DraggableTexturePreview({
     if (isDragging) {
       const handleMove = (e) => handlePointerMove(e)
       const handleUp = () => handlePointerUp()
-      
+
       window.addEventListener('mousemove', handleMove)
       window.addEventListener('mouseup', handleUp)
       window.addEventListener('touchmove', handleMove, { passive: false })
       window.addEventListener('touchend', handleUp)
-      
+
       return () => {
         window.removeEventListener('mousemove', handleMove)
         window.removeEventListener('mouseup', handleUp)
@@ -166,7 +145,7 @@ export default function DraggableTexturePreview({
     }
 
     container.addEventListener('wheel', wheelHandler, { passive: false })
-    
+
     return () => {
       container.removeEventListener('wheel', wheelHandler)
     }
@@ -184,16 +163,15 @@ export default function DraggableTexturePreview({
           {selectedKeys.length} key{selectedKeys.length !== 1 ? 's' : ''}
         </span>
       </div>
-      
+
       {/* Large Preview Area */}
-      <div 
+      <div
         ref={containerRef}
-        className={`relative w-full bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 rounded-2xl border-2 overflow-hidden shadow-2xl transition-all ${
-          isDragging 
-            ? 'border-grim-accent shadow-grim-accent/50 cursor-grabbing scale-[0.98]' 
-            : 'border-grim-accent/40 cursor-grab hover:border-grim-accent/60'
-        }`}
-        style={{ 
+        className={`relative w-full bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 rounded-2xl border-2 overflow-hidden shadow-2xl transition-all ${isDragging
+          ? 'border-grim-accent shadow-grim-accent/50 cursor-grabbing scale-[0.98]'
+          : 'border-grim-accent/40 cursor-grab hover:border-grim-accent/60'
+          }`}
+        style={{
           aspectRatio: `${aspectRatio} / 1`,
           minHeight: '300px',
           maxHeight: '400px'
@@ -202,17 +180,17 @@ export default function DraggableTexturePreview({
         onTouchStart={handlePointerDown}
       >
         {/* Texture Image Layer */}
-        <div 
+        <div
           className="absolute inset-0 flex items-center justify-center"
           style={{
-            transform: `translate(${positionX}px, ${positionY}px) scale(${zoom})`,
+            transform: `translate(${positionX * 1}%, ${positionY * 1}%) scale(${zoom})`,
             transformOrigin: 'center center',
             transition: isDragging ? 'none' : 'transform 0.1s ease-out',
             willChange: isDragging ? 'transform' : 'auto'
           }}
         >
-          <img 
-            src={textureUrl} 
+          <img
+            src={textureUrl}
             alt="Texture preview"
             className="w-full h-full object-contain pointer-events-none select-none"
             draggable={false}
@@ -222,16 +200,16 @@ export default function DraggableTexturePreview({
             }}
           />
         </div>
-        
+
         {/* Subtle Vignette */}
         <div className="absolute inset-0 pointer-events-none bg-gradient-radial from-transparent via-transparent to-black/30" />
-        
-        {/* Corner Guides */}
-        <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-grim-accent/70 rounded-tl-lg pointer-events-none" />
-        <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-grim-accent/70 rounded-tr-lg pointer-events-none" />
-        <div className="absolute bottom-3 left-3 w-8 h-8 border-b-2 border-l-2 border-grim-accent/70 rounded-bl-lg pointer-events-none" />
-        <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-grim-accent/70 rounded-br-lg pointer-events-none" />
-        
+
+        {/* Crop Area Corners — sharp rectangles to show visible region */}
+        <div className="absolute top-3 left-3 w-10 h-10 border-t-2 border-l-2 border-grim-accent pointer-events-none" />
+        <div className="absolute top-3 right-3 w-10 h-10 border-t-2 border-r-2 border-grim-accent pointer-events-none" />
+        <div className="absolute bottom-3 left-3 w-10 h-10 border-b-2 border-l-2 border-grim-accent pointer-events-none" />
+        <div className="absolute bottom-3 right-3 w-10 h-10 border-b-2 border-r-2 border-grim-accent pointer-events-none" />
+
         {/* Zoom Controls */}
         <div className="absolute bottom-4 left-4 flex items-center gap-2 pointer-events-auto">
           <button
@@ -251,13 +229,13 @@ export default function DraggableTexturePreview({
             <Plus className="w-4 h-4 text-grim-accent" />
           </button>
         </div>
-        
+
         {/* Zoom Indicator */}
         <div className="absolute bottom-4 right-4 px-4 py-2 bg-black/90 backdrop-blur-md rounded-xl border border-grim-accent/40 flex items-center gap-2 pointer-events-none shadow-lg">
           <ZoomIn className="w-4 h-4 text-grim-accent" />
           <span className="text-sm font-mono text-white font-bold">{zoom.toFixed(2)}x</span>
         </div>
-        
+
         {/* Instructions Overlay */}
         {!isDragging && (
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
@@ -270,10 +248,10 @@ export default function DraggableTexturePreview({
           </div>
         )}
       </div>
-      
+
       {/* Info Text */}
       <p className="text-xs text-gray-500 text-center">
-        {selectedKeys.length > 0 
+        {selectedKeys.length > 0
           ? `Preview shows how texture will appear on your ${selectedKeys.length} selected key${selectedKeys.length !== 1 ? 's' : ''}`
           : 'Select keys to customize'
         }

@@ -5,58 +5,60 @@ import DraggableTexturePreview from './DraggableTexturePreview'
 
 export default function TextureControls() {
   const [showAdvanced, setShowAdvanced] = useState(false)
-  
+
   const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
-  const activeLayer = useConfiguratorStore((state) => 
+  const activeLayer = useConfiguratorStore((state) =>
     state.layers.find(layer => layer.id === activeLayerId)
   )
   const updateTextureTransform = useConfiguratorStore((state) => state.updateTextureTransform)
   const resetTextureTransform = useConfiguratorStore((state) => state.resetTextureTransform)
-  
+
   if (!activeLayer || !activeLayer.textureUrl) return null
-  
+
   const { zoom, positionX, positionY, rotation } = activeLayer.textureTransform
-  
+
   // Calculate minimum zoom to ensure texture always covers area (WhatsApp-style)
   const minZoom = 1.0 // Can be calculated based on image aspect ratio later
-  
+
   // Calculate max position based on zoom
+  // Reduced from 50 to 25 to prevent texture from moving too far and creating gaps
+  // At zoom=1: maxPosition=0 (no movement)
+  // At zoom=2: maxPosition=25 (can move ±25 units = ±0.25 UV units)
+  // At zoom=3: maxPosition=50 (can move ±50 units = ±0.50 UV units)
   const getMaxPosition = (currentZoom) => {
-    const baseMax = 20
-    const maxPos = baseMax * currentZoom
-    return Math.min(50, Math.max(20, maxPos))
+    return Math.max(0, (currentZoom - 1) * 25)
   }
-  
+
   const maxPosition = getMaxPosition(zoom)
-  
+
   const handleChange = (property, value) => {
     let finalValue = parseFloat(value)
-    
+
     // Ensure zoom never goes below minZoom (WhatsApp-style: always covers area)
     if (property === 'zoom') {
       finalValue = Math.max(minZoom, Math.min(3.0, finalValue))
     }
-    
+
     // Clamp position values
     if (property === 'positionX' || property === 'positionY') {
       finalValue = Math.max(-maxPosition, Math.min(maxPosition, finalValue))
     }
-    
+
     updateTextureTransform(activeLayerId, { [property]: finalValue })
   }
-  
+
   const handlePositionChange = (newX, newY) => {
-    updateTextureTransform(activeLayerId, { 
-      positionX: newX, 
-      positionY: newY 
+    updateTextureTransform(activeLayerId, {
+      positionX: newX,
+      positionY: newY
     })
   }
-  
+
   const handleZoomChange = (newZoom) => {
     const clampedZoom = Math.max(minZoom, Math.min(3.0, newZoom))
     updateTextureTransform(activeLayerId, { zoom: clampedZoom })
   }
-  
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-2">
@@ -68,7 +70,7 @@ export default function TextureControls() {
           Reset
         </button>
       </div>
-      
+
       {/* WhatsApp-Style Draggable Preview */}
       <DraggableTexturePreview
         textureUrl={activeLayer.textureUrl}
@@ -79,7 +81,7 @@ export default function TextureControls() {
         onPositionChange={handlePositionChange}
         onZoomChange={handleZoomChange}
       />
-      
+
       {/* Zoom Slider - Always Visible */}
       <div className="space-y-1.5">
         <div className="flex justify-between items-center">
@@ -99,7 +101,7 @@ export default function TextureControls() {
           {zoom === minZoom ? 'Minimum (100% coverage)' : `${((zoom / minZoom) * 100).toFixed(0)}% zoom`}
         </p>
       </div>
-      
+
       {/* Advanced Controls - Collapsible */}
       <div className="border-t border-gray-800 pt-3">
         <button
@@ -112,7 +114,7 @@ export default function TextureControls() {
           </span>
           {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
-        
+
         {showAdvanced && (
           <div className="mt-3 space-y-4 pl-2">
             {/* Precision Position X */}
@@ -132,7 +134,7 @@ export default function TextureControls() {
               />
               <p className="text-xs text-gray-600 italic">Range: ±{maxPosition.toFixed(0)}</p>
             </div>
-            
+
             {/* Precision Position Y */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
@@ -150,7 +152,7 @@ export default function TextureControls() {
               />
               <p className="text-xs text-gray-600 italic">Range: ±{maxPosition.toFixed(0)}</p>
             </div>
-            
+
             {/* Rotation */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">

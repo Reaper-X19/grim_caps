@@ -67,16 +67,23 @@ function App() {
   }, [location.pathname])
 
   // Page transition animation - ensure it always completes
+  // SKIP for configurator page: setting opacity to 0 during Three.js Canvas
+  // initialization causes WebGL context loss on hard reload
   useEffect(() => {
     const pageTransition = document.querySelector('.page-transition')
     if (pageTransition) {
-      // Set to 0 immediately, then animate to 1
-      gsap.set(pageTransition, { opacity: 0 })
-      gsap.to(pageTransition, {
-        opacity: 1,
-        duration: 0.4,
-        ease: 'power2.out'
-      })
+      if (location.pathname === '/configurator') {
+        // Immediately visible — don't hide while WebGL initializes
+        gsap.set(pageTransition, { opacity: 1 })
+      } else {
+        // Set to 0 immediately, then animate to 1
+        gsap.set(pageTransition, { opacity: 0 })
+        gsap.to(pageTransition, {
+          opacity: 1,
+          duration: 0.4,
+          ease: 'power2.out'
+        })
+      }
     }
   }, [location.pathname])
 

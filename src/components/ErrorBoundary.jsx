@@ -3,7 +3,7 @@ import React from 'react'
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props)
-    this.state = { hasError: false, error: null }
+    this.state = { hasError: false, error: null, retryCount: 0 }
   }
 
   static getDerivedStateFromError(error) {
@@ -12,10 +12,34 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('3D Scene Error:', error, errorInfo)
+
+    // Auto-recover from transient WebGL context loss (up to 3 retries)
+    if (this.state.retryCount < 3) {
+      setTimeout(() => {
+        this.setState((prev) => ({
+          hasError: false,
+          error: null,
+          retryCount: prev.retryCount + 1
+        }))
+      }, 1500)
+    }
   }
 
   render() {
     if (this.state.hasError) {
+      // Show loading state while auto-recovering
+      if (this.state.retryCount < 3) {
+        return (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-grim-darker to-grim-dark rounded-lg">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-grim-accent border-t-transparent mx-auto mb-4"></div>
+              <p className="text-gray-400">Reinitializing 3D scene...</p>
+            </div>
+          </div>
+        )
+      }
+
+      // Permanent error after max retries
       return (
         <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-grim-darker to-grim-dark rounded-lg">
           <div className="text-center p-8">
@@ -44,3 +68,4 @@ class ErrorBoundary extends React.Component {
 }
 
 export default ErrorBoundary
+

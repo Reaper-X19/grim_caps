@@ -34,6 +34,10 @@ const useConfiguratorStore = create((set, get) => ({
   // Copied style for paste functionality
   copiedStyle: null,
 
+  // Loaded design tracking (for overwrite vs. new save)
+  loadedDesignId: null,
+  loadedDesignMeta: null,
+
   // Actions
   addLayer: () => set((state) => {
     const newId = `layer-${Date.now()}`
@@ -98,13 +102,32 @@ const useConfiguratorStore = create((set, get) => ({
   })),
 
   uploadTexture: (layerId, file) => set((state) => {
+    // Revoke old blob URL to prevent memory leaks
+    const oldLayer = state.layers.find(l => l.id === layerId)
+    if (oldLayer?.textureUrl) {
+      URL.revokeObjectURL(oldLayer.textureUrl)
+    }
+
     const textureUrl = URL.createObjectURL(file)
+
+    // Also update all keyCustomizations that belong to this layer
+    const newCustomizations = { ...state.keyCustomizations }
+    Object.keys(newCustomizations).forEach(keyName => {
+      if (newCustomizations[keyName].layerId === layerId) {
+        newCustomizations[keyName] = {
+          ...newCustomizations[keyName],
+          textureUrl
+        }
+      }
+    })
+
     return {
       layers: state.layers.map(layer =>
         layer.id === layerId
           ? { ...layer, texture: file, textureUrl }
           : layer
-      )
+      ),
+      keyCustomizations: newCustomizations
     }
   }),
 
@@ -380,9 +403,27 @@ const useConfiguratorStore = create((set, get) => ({
       activeLayerId: 'layer-1',
       keyCustomizations: {},
       selectionLocked: false,
-      selectionMode: false
+      selectionMode: false,
+      // Track which design was loaded so Save can offer overwrite
+      loadedDesignId: designData.id || null,
+      loadedDesignMeta: designData.id ? {
+        title: designData.name || '',
+        description: designData.description || '',
+        category: designData.category || 'custom',
+        tags: designData.tags || [],
+        isPublic: designData.is_public || false
+      } : null
     })
-  }
+  },
+
+  // Clear loaded design tracking (e.g. when starting fresh)
+  clearLoadedDesign: () => set({ loadedDesignId: null, loadedDesignMeta: null }),
+
+  // Set loaded design tracking (e.g. after saving a design)
+  setLoadedDesign: (designId, meta) => set({
+    loadedDesignId: designId,
+    loadedDesignMeta: meta
+  })
 }))
 
 export default useConfiguratorStore
