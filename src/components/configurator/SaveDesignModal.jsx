@@ -142,8 +142,13 @@ export default function SaveDesignModal({ isOpen, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Check auth FIRST for private designs
-    if (!formData.isPublic && !user) {
+    console.log('SaveDesignModal - handleSubmit called')
+    console.log('formData.isPublic:', formData.isPublic)
+    console.log('user:', user)
+
+    // Check auth FIRST - required for ALL save operations
+    if (!user) {
+      console.log('Save/Publish requires authentication - showing auth modal')
       setShowAuthModal(true)
       return
     }
@@ -523,7 +528,7 @@ export default function SaveDesignModal({ isOpen, onClose }) {
                   Publish to Community Gallery
                 </label>
                 <p className="text-xs text-gray-400 mt-1">
-                  Share your design with the community. You can change this later.
+                  Share your design with the community. {!user && <span className="text-grim-accent">Sign in required to save.</span>}
                 </p>
               </div>
             </div>

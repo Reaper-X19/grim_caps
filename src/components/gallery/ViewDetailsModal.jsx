@@ -1,26 +1,52 @@
 import { X, Heart, Copy, ShoppingCart, User, Calendar } from 'lucide-react'
 import { formatPrice } from '../../utils/pricing'
-import { useState } from 'react'
-import { likeDesign } from '../../services/supabase'
+import { useState, useEffect } from 'react'
+import { toggleLike } from '../../services/supabase'
 import useCartStore from '../../store/cartStore'
+import useAuthStore from '../../store/authStore'
 
-export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator, onLikeUpdate }) {
-  const [liked, setLiked] = useState(false)
+export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator, onLikeUpdate, currentLikeState, onAuthRequired }) {
+  const [liked, setLiked] = useState(currentLikeState || false)
+  const [likesCount, setLikesCount] = useState(design.likes_count || 0)
   const addDesign = useCartStore(state => state.addDesign)
   const isInCart = useCartStore(state => state.isInCart(design.id))
+  const user = useAuthStore(state => state.user)
+
+  // Sync liked state when prop changes
+  useEffect(() => {
+    setLiked(currentLikeState || false)
+  }, [currentLikeState])
+
+  // Sync likes count when design changes
+  useEffect(() => {
+    setLikesCount(design.likes_count || 0)
+  }, [design.likes_count])
 
   const handleLike = async () => {
-    if (liked) return
+    console.log('ViewDetailsModal handleLike:', { user, userId: user?.id, liked, designId: design.id })
+    
+    // Check authentication
+    if (!user) {
+      if (onAuthRequired) {
+        onAuthRequired()
+      }
+      return
+    }
     
     try {
-      await likeDesign(design.id)
-      setLiked(true)
+      await toggleLike(design.id, user.id, liked)
+      const newLikedState = !liked
+      setLiked(newLikedState)
+      
+      // Update local like count
+      setLikesCount(prev => newLikedState ? prev + 1 : Math.max(0, prev - 1))
+      
       // Notify parent to update the design in the list
       if (onLikeUpdate) {
-        onLikeUpdate(design.id)
+        onLikeUpdate(design.id, newLikedState)
       }
     } catch (error) {
-      console.error('Error liking design:', error)
+      console.error('Error toggling like:', error)
     }
   }
 
@@ -105,7 +131,7 @@ export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator
                   <div className="text-sm text-gray-400">Keys</div>
                 </div>
                 <div className="glass p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-grim-accent">{design.likes_count || 0}</div>
+                  <div className="text-2xl font-bold text-grim-accent">{likesCount}</div>
                   <div className="text-sm text-gray-400">Likes</div>
                 </div>
                 <div className="glass p-4 rounded-lg">
@@ -153,15 +179,15 @@ export default function ViewDetailsModal({ design, onClose, onCopyToConfigurator
             
             <button
               onClick={handleLike}
-              disabled={liked}
               className={`px-6 py-4 font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
                 liked
-                  ? 'bg-red-500 text-white cursor-not-allowed'
+                  ? 'bg-red-500 text-white hover:bg-red-600'
                   : 'glass hover:bg-red-500/20 hover:text-red-400'
               }`}
+              title={user ? (liked ? 'Unlike this design' : 'Like this design') : 'Sign in to like'}
             >
               <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
-              {liked ? 'Liked' : 'Like'}
+              {liked ? 'Unlike' : 'Like'}
             </button>
           </div>
         </div>
