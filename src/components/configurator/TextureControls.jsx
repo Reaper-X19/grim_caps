@@ -21,12 +21,13 @@ export default function TextureControls() {
   const minZoom = 1.0 // Can be calculated based on image aspect ratio later
 
   // Calculate max position based on zoom
-  // Reduced from 50 to 25 to prevent texture from moving too far and creating gaps
-  // At zoom=1: maxPosition=0 (no movement)
-  // At zoom=2: maxPosition=25 (can move ±25 units = ±0.25 UV units)
-  // At zoom=3: maxPosition=50 (can move ±50 units = ±0.50 UV units)
+  // We need to ensure the texture always covers the key (UVs within 0-1)
+  // formula: 50 * (1 - 1/zoom)
+  // At zoom=1: 50 * 0 = 0
+  // At zoom=2: 50 * 0.5 = 25
+  // At zoom=3: 50 * 0.66 = 33.33 (was 50 previously, causing stretching)
   const getMaxPosition = (currentZoom) => {
-    return Math.max(0, (currentZoom - 1) * 25)
+    return 50 * (1 - 1 / currentZoom)
   }
 
   const maxPosition = getMaxPosition(zoom)
@@ -37,6 +38,18 @@ export default function TextureControls() {
     // Ensure zoom never goes below minZoom (WhatsApp-style: always covers area)
     if (property === 'zoom') {
       finalValue = Math.max(minZoom, Math.min(3.0, finalValue))
+
+      // When zooming, we must re-clamp the positions to valid bounds for the NEW zoom level
+      const newMaxPos = getMaxPosition(finalValue)
+      const newX = Math.max(-newMaxPos, Math.min(newMaxPos, positionX))
+      const newY = Math.max(-newMaxPos, Math.min(newMaxPos, positionY))
+
+      updateTextureTransform(activeLayerId, {
+        zoom: finalValue,
+        positionX: newX,
+        positionY: newY
+      })
+      return
     }
 
     // Clamp position values
@@ -55,8 +68,18 @@ export default function TextureControls() {
   }
 
   const handleZoomChange = (newZoom) => {
-    const clampedZoom = Math.max(minZoom, Math.min(3.0, newZoom))
-    updateTextureTransform(activeLayerId, { zoom: clampedZoom })
+    const finalZoom = Math.max(minZoom, Math.min(3.0, newZoom))
+
+    // When zooming via preview, we must re-clamp positions too
+    const newMaxPos = getMaxPosition(finalZoom)
+    const newX = Math.max(-newMaxPos, Math.min(newMaxPos, positionX))
+    const newY = Math.max(-newMaxPos, Math.min(newMaxPos, positionY))
+
+    updateTextureTransform(activeLayerId, {
+      zoom: finalZoom,
+      positionX: newX,
+      positionY: newY
+    })
   }
 
   return (
