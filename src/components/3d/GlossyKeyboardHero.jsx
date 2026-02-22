@@ -26,9 +26,9 @@ import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from '../playground/key
 // ─── Camera with mouse parallax ──────────────────────────────────────────────
 export function HeroCameraRig({ mouse }) {
   useFrame(({ camera }) => {
-    // Gently push camera toward mouse-driven look target
-    const tx = mouse.current.x * 0.35
-    const ty = mouse.current.y * 0.18 + 0.05
+    // Very subtle camera lean toward the cursor
+    const tx = (mouse?.current?.x ?? 0) * 0.12
+    const ty = (mouse?.current?.y ?? 0) * 0.07 + 0.05
     camera.position.x += (tx - camera.position.x) * 0.035
     camera.position.y += (ty - camera.position.y) * 0.035
     camera.lookAt(0, 0.1, 0)
@@ -144,12 +144,17 @@ export default function GlossyKeyboardHero({ mouse }) {
       wrapper.position.y = -4
       wrapper.rotation.z = -0.15
 
-      // Rise from void
+      // Rise from void, then cinematic landing
       gsap.timeline()
-        .to(wrapper.position, { y: 0, duration: 1.6, ease: 'power3.out' }, 0)
-        .to(wrapper.rotation, { z: 0,  duration: 1.6, ease: 'power3.out' }, 0)
-        // Slight dramatic rotation swing during rise
-        .from(wrapper.rotation, { y: -0.3, duration: 1.4, ease: 'power2.out' }, 0.1)
+        .to(wrapper.position, { y: 0, duration: 1.55, ease: 'power3.out' }, 0)
+        .to(wrapper.rotation, { z: 0, duration: 1.55, ease: 'power3.out' }, 0)
+        .from(wrapper.rotation, { y: -0.28, duration: 1.35, ease: 'power2.out' }, 0.1)
+        // ── Landing thud: dip slightly, bounce back ──
+        .to(wrapper.position, { y: -0.10, duration: 0.10, ease: 'power3.in'  }, 1.50)
+        .to(wrapper.position, { y:  0,    duration: 0.55, ease: 'elastic.out(1, 0.45)' }, 1.60)
+        // Scale squish on impact
+        .to(wrapper.scale, { x: 1.022, y: 0.96, z: 1.022, duration: 0.10, ease: 'power3.in'  }, 1.50)
+        .to(wrapper.scale, { x: 1,     y: 1,    z: 1,     duration: 0.40, ease: 'elastic.out(1, 0.5)' }, 1.60)
     }
   }, [emissionColor, emissionIntensity, keycapEmissionIntensity, metalness, roughness])
 
@@ -157,18 +162,21 @@ export default function GlossyKeyboardHero({ mouse }) {
   useFrame(({ clock }) => {
     if (!wrapperRef.current) return
 
-    // Mouse parallax (max ±0.12 rad tilt)
+    // Mouse parallax — very subtle (max ±0.05 rad X, ±0.035 rad Y)
     const mouseX = mouse?.current?.x ?? 0
     const mouseY = mouse?.current?.y ?? 0
-    mouseRotRef.current.x += (mouseY * -0.10 - mouseRotRef.current.x) * 0.06
-    mouseRotRef.current.y += (mouseX *  0.14 - mouseRotRef.current.y) * 0.06
+    mouseRotRef.current.x += (mouseY * -0.035 - mouseRotRef.current.x) * 0.06
+    mouseRotRef.current.y += (mouseX *  0.050 - mouseRotRef.current.y) * 0.06
 
-    // Breathing float
+    // Breathing float — runs continuously after intro settles
     const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.04
 
     wrapperRef.current.rotation.x = mouseRotRef.current.x
     wrapperRef.current.rotation.y = mouseRotRef.current.y
-    wrapperRef.current.position.y = breathe
+    // Only add breathe offset after intro is roughly done (1.8s)
+    if (clock.elapsedTime > 2.1) {
+      wrapperRef.current.position.y += (breathe - wrapperRef.current.position.y) * 0.04
+    }
   })
 
   useColumnWave(waveEnabled ? groupRef : { current: null }, {
