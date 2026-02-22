@@ -50,9 +50,9 @@ function IntroCamera({ onComplete }) {
     const progress = t / 3.0
     const ease = 1 - Math.pow(1 - progress, 3)
 
-    // Camera path: z: 22→8,  y: 2→6
-    const targetZ = 22 + (8  - 22) * ease
-    const targetY =  2 + (6  -  2) * ease
+    // Camera path: z: 22→5,  y: 2→5.5
+    const targetZ = 22 + (5   - 22) * ease
+    const targetY =  2 + (5.5 -  2) * ease
 
     camera.position.z = targetZ
     camera.position.y = targetY
@@ -81,15 +81,11 @@ function AnimatedKeyboard() {
     obj.scale.set(0.92, 0.92, 0.92)
 
     gsap.timeline()
-      // Rise to configured angle with a slight swing
-      .to(obj.rotation, { x: 0.55, y: 0.05, duration: 2.8, ease: 'power3.out' }, 0.4)
-      // Float in from slightly below
+      .to(obj.rotation, { x: 0.70, y: 0.05, duration: 2.8, ease: 'power3.out' }, 0.4)
       .from(obj.position, { y: -0.3, duration: 2.0, ease: 'power3.out' }, 0.3)
-      // Scale up — keyboard "approaches" camera
       .to(obj.scale, { x: 1, y: 1, z: 1, duration: 2.6, ease: 'power3.out' }, 0.3)
-      // Subtle landing bob
-      .to(obj.rotation, { x: 0.52, duration: 0.14, ease: 'power2.in' }, 3.0)
-      .to(obj.rotation, { x: 0.55, duration: 0.40, ease: 'elastic.out(1,0.4)' }, 3.14)
+      .to(obj.rotation, { x: 0.67, duration: 0.14, ease: 'power2.in' }, 3.0)
+      .to(obj.rotation, { x: 0.70, duration: 0.40, ease: 'elastic.out(1,0.4)' }, 3.14)
   }, [])
 
   return (
@@ -159,8 +155,8 @@ export default function KeyboardScene() {
           <OrbitControls
             enableDamping
             dampingFactor={0.06}
-            minDistance={4}
-            maxDistance={18}
+            minDistance={3}
+            maxDistance={14}
             maxPolarAngle={Math.PI / 1.8}
             target={[0, 0, 0]}
           />

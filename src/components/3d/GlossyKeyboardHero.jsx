@@ -1,22 +1,19 @@
 /**
- * GlossyKeyboardHero — Cinematic Hero Keyboard (v3)
+ * GlossyKeyboardHero — Cinematic Hero Keyboard (v4 — SPIN)
  *
- * JERK FIX: Separated into 3 group layers so GSAP and useFrame NEVER
- * write to the same property on the same object:
- *   floatRef  → useFrame breathing (position.y only)
- *   introRef  → GSAP intro (position.y + rotation.z + scale)
- *   mouseRef  → useFrame mouse parallax (rotation.x/y only)
- *   groupRef  → Leva controls (position/rotation/scale final)
+ * ANIMATION:
+ *   Intro: keyboard rises from below + SPINS fast on Y-axis (coin-flip entry)
+ *   Landing: spin decelerates dramatically when it thuds
+ *   After landing: slow continuous Y-rotation (showroom turntable, ~30s/rev)
+ *   Breathing: gentle Y-float runs independently on floatRef
+ *   Mouse parallax: very subtle X-tilt (Y is controlled by spin)
  *
- * INTRO (GSAP, introRef):
- *   t=0.00  rise from y=-3.5 with power3.out, z-tilt corrects
- *   t=0.10  Y-swing (rotates then settles)
- *   t=1.50  impact thud: y → -0.08, squash-stretch on scale
- *   t=1.60  elastic bounce back → y=0, scale=1
- *   After t=2.1s: breathing float starts (floatRef, separate group)
- *
- * MOUSE PARALLAX (subtle):
- *   max ±0.05 rad Y, ±0.035 rad X — barely noticeable, feels immersive
+ * LAYER STACK (no conflicts):
+ *   floatRef   → useFrame: breathing Y only
+ *   introRef   → GSAP: rise + squash — never breathe
+ *   spinRef    → useFrame: Y-spin only (speed lerps from fast → slow)
+ *   mouseWrapRef→ useFrame: mouse X-tilt only
+ *   groupRef   → Leva controls
  */
 import { useRef, useEffect } from 'react'
 import * as THREE from 'three'
@@ -24,9 +21,8 @@ import { useFrame } from '@react-three/fiber'
 import { useControls } from 'leva'
 import gsap from 'gsap'
 import { KeyboardGlossyModel } from './Keyboard_Glossy'
-import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from '../playground/keyboardLayout'
 
-// ─── Camera with mouse parallax (very subtle) ─────────────────────────────────
+// ─── Camera rig ───────────────────────────────────────────────────────────────
 export function HeroCameraRig({ mouse }) {
   useFrame(({ camera }) => {
     const tx = (mouse?.current?.x ?? 0) * 0.12
@@ -38,51 +34,18 @@ export function HeroCameraRig({ mouse }) {
   return null
 }
 
-// ─── Column wave ──────────────────────────────────────────────────────────────
-function useColumnWave(groupRef, {
-  lift = 0.06, duration = 0.4, columnDelay = 0.042,
-  interval = 5000, accentColor = '#00ffcc',
-} = {}) {
-  useEffect(() => {
-    let timeout, tl = null
-    function runWave() {
-      if (!groupRef.current) { timeout = setTimeout(runWave, 200); return }
-      const columns = resolveLayout(KEYBOARD_COLUMNS, buildMeshMap(groupRef.current))
-      if (!columns.length) { timeout = setTimeout(runWave, 200); return }
-
-      columns.flat().forEach(m => {
-        if (m.userData.origY === undefined) m.userData.origY = m.position.y
-      })
-      const accent = new THREE.Color(accentColor)
-      tl = gsap.timeline({ onComplete: () => { timeout = setTimeout(runWave, interval) } })
-      columns.forEach((colMeshes, ci) => {
-        const t = ci * columnDelay
-        const mats = colMeshes.map(m => m.material)
-        colMeshes.forEach(m => {
-          tl.to(m.position, { y: m.userData.origY + lift, duration, ease: 'power2.out' }, t)
-          tl.to(m.position, { y: m.userData.origY, duration, ease: 'power2.inOut' }, t + duration * 0.6)
-        })
-        tl.to(mats, {
-          emissiveIntensity: 0.35, duration: duration * 0.4, stagger: 0.005,
-          onStart() { mats.forEach(mt => mt.emissive?.copy(accent)) },
-        }, t)
-        tl.to(mats, { emissiveIntensity: 0, duration: duration * 0.7, stagger: 0.005 }, t + duration * 0.55)
-      })
-    }
-    timeout = setTimeout(runWave, 3000)   // after intro finishes
-    return () => { clearTimeout(timeout); tl?.kill() }
-  }, []) // eslint-disable-line
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function GlossyKeyboardHero({ mouse }) {
-  const groupRef    = useRef()    // Leva position / rotation / scale
-  const mouseWrapRef= useRef()    // useFrame: mouse rotation only
-  const introRef    = useRef()    // GSAP intro: y-position + scale (never breathe)
-  const floatRef    = useRef()    // useFrame: breathing Y only — never GSAP
-  const readyRef    = useRef(false)
-  const mouseRotRef = useRef({ x: 0, y: 0 })
-  const introDoneRef= useRef(false)  // breathing starts only after this is true
+  const groupRef     = useRef()     // Leva controls
+  const mouseWrapRef = useRef()     // useFrame: mouse X-tilt only
+  const spinRef      = useRef()     // useFrame: Y-spin only
+  const introRef     = useRef()     // GSAP: rise + squash
+  const floatRef     = useRef()     // useFrame: breathing Y only
+
+  const readyRef       = useRef(false)
+  const introDoneRef   = useRef(false)
+  const spinSpeedRef   = useRef(3.8)   // rad/s — fast during intro, slows after landing
+  const mouseRotX      = useRef(0)     // smoothed mouse X-tilt
 
   const {
     posX, posY, posZ,
@@ -90,7 +53,6 @@ export default function GlossyKeyboardHero({ mouse }) {
     scale,
     emissionColor, emissionIntensity, keycapEmissionIntensity,
     metalness, roughness,
-    waveEnabled,
   } = useControls('Glossy Keyboard', {
     posX: { value: 0.2,  min: -10, max: 10, step: 0.1 },
     posY: { value: -0.0, min: -10, max: 10, step: 0.1 },
@@ -104,10 +66,9 @@ export default function GlossyKeyboardHero({ mouse }) {
     keycapEmissionIntensity:{ value: 0.10, min: 0, max: 5,  step: 0.05 },
     metalness: { value: 0.30, min: 0, max: 1, step: 0.05 },
     roughness:  { value: 0.30, min: 0, max: 1, step: 0.05 },
-    waveEnabled: { value: true, label: 'Hero Wave' },
   })
 
-  // Apply materials + trigger intro (once)
+  // Materials + GSAP intro
   useEffect(() => {
     if (!groupRef.current) return
     const emissiveColor = new THREE.Color(emissionColor)
@@ -136,67 +97,63 @@ export default function GlossyKeyboardHero({ mouse }) {
       child.material.needsUpdate = true
     })
 
-    // ── Cinematic intro — ONLY touches introRef ──────────────────────────────
     if (!readyRef.current && introRef.current) {
       readyRef.current = true
       const intro = introRef.current
 
-      // Reset to starting pose
       intro.position.y = -3.5
-      intro.rotation.z = -0.14
+      intro.rotation.z = -0.12
       intro.scale.set(1, 1, 1)
 
       gsap.timeline()
-        // Rise from below
+        // Rise from void
         .to(intro.position, { y: 0, duration: 1.55, ease: 'power3.out' }, 0)
         .to(intro.rotation, { z: 0, duration: 1.55, ease: 'power3.out' }, 0)
-        .from(intro.rotation, { y: -0.28, duration: 1.35, ease: 'power2.out' }, 0.1)
-        // ── Landing thud ──
+        // Landing thud on introRef — GSAP owns this, never useFrame
         .to(intro.position, { y: -0.10, duration: 0.10, ease: 'power3.in' }, 1.50)
         .to(intro.position, { y: 0,     duration: 0.55, ease: 'elastic.out(1, 0.40)' }, 1.60)
-        // Squash-and-stretch: ONLY on introRef.scale, not on groupRef.scale
-        .to(intro.scale, { x: 1.020, y: 0.962, z: 1.020, duration: 0.10, ease: 'power3.in'  }, 1.50)
+        // Squash-and-stretch on introRef.scale only
+        .to(intro.scale, { x: 1.022, y: 0.960, z: 1.022, duration: 0.10, ease: 'power3.in' }, 1.50)
         .to(intro.scale, { x: 1,     y: 1,     z: 1,     duration: 0.42, ease: 'elastic.out(1, 0.5)' }, 1.60)
-        // Signal that breathing can start
+        // Signal landing done → spin slows, breathing starts
         .call(() => { introDoneRef.current = true }, null, 2.15)
     }
   }, [emissionColor, emissionIntensity, keycapEmissionIntensity, metalness, roughness])
 
-  // Mouse parallax → mouseWrapRef.rotation (NEVER touches position or scale)
-  // Breathing → floatRef.position.y (NEVER touches introRef)
-  useFrame(({ clock }) => {
-    // Mouse rotation
-    if (mouseWrapRef.current) {
-      const mx = mouse?.current?.x ?? 0
-      const my = mouse?.current?.y ?? 0
-      mouseRotRef.current.x += (my * -0.035 - mouseRotRef.current.x) * 0.06
-      mouseRotRef.current.y += (mx *  0.050 - mouseRotRef.current.y) * 0.06
-      mouseWrapRef.current.rotation.x = mouseRotRef.current.x
-      mouseWrapRef.current.rotation.y = mouseRotRef.current.y
+  // All useFrame motion — each ref owned exclusively
+  useFrame(({ clock }, delta) => {
+    // ── Spin: Y rotation on spinRef ──────────────────────────────────────
+    if (spinRef.current) {
+      // Target speed: fast during intro (3.8 rad/s), slow after landing (0.22 rad/s)
+      const targetSpeed = introDoneRef.current ? 0.22 : 3.8
+      // Decelerate dramatically: snap faster when slowing down for dramatic effect
+      const lerpFactor = introDoneRef.current ? 0.025 : 0.006
+      spinSpeedRef.current += (targetSpeed - spinSpeedRef.current) * lerpFactor
+      spinRef.current.rotation.y += spinSpeedRef.current * delta
     }
 
-    // Breathing — separate floatRef, NEVER touched by GSAP
+    // ── Mouse X-tilt on mouseWrapRef (Y-axis is the spin, so only X here) ──
+    if (mouseWrapRef.current) {
+      const my = mouse?.current?.y ?? 0
+      mouseRotX.current += (my * -0.040 - mouseRotX.current) * 0.06
+      mouseWrapRef.current.rotation.x = mouseRotX.current
+    }
+
+    // ── Breathing float on floatRef — only after intro done ─────────────
     if (floatRef.current && introDoneRef.current) {
-      const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.038
+      const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.040
       floatRef.current.position.y += (breathe - floatRef.current.position.y) * 0.045
     }
   })
 
-  useColumnWave(waveEnabled ? groupRef : { current: null }, {
-    lift: 0.06, duration: 0.40, columnDelay: 0.042,
-    interval: 5000, accentColor: emissionColor,
-  })
-
   return (
-    // floatRef → breathing (useFrame, position.y only)
     <group ref={floatRef}>
-      {/* introRef → GSAP intro (position.y, rotation.z, scale) */}
       <group ref={introRef}>
-        {/* mouseWrapRef → mouse rotation (rotation.x/y only) */}
-        <group ref={mouseWrapRef}>
-          {/* groupRef → Leva controls */}
-          <group ref={groupRef} position={[posX, posY, posZ]} rotation={[rotX, rotY, rotZ]} scale={scale}>
-            <KeyboardGlossyModel />
+        <group ref={spinRef}>
+          <group ref={mouseWrapRef}>
+            <group ref={groupRef} position={[posX, posY, posZ]} rotation={[rotX, rotY, rotZ]} scale={scale}>
+              <KeyboardGlossyModel />
+            </group>
           </group>
         </group>
       </group>
