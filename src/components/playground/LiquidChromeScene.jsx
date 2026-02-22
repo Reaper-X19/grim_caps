@@ -135,6 +135,15 @@ export default function LiquidChromeScene() {
     const meshMap = buildMeshMap(groupRef.current)
     const columns = resolveLayout(KEYBOARD_COLUMNS, meshMap)
 
+    // DEBUG: print all structural mesh names once to find Bottom_Case name
+    const structNames = []
+    groupRef.current.traverse(c => {
+      if (c.isMesh && !c.name.startsWith('K_') && !c.name.toLowerCase().includes('emission')
+          && c.name !== 'Knob' && c.name !== 'Screen')
+        structNames.push(c.name)
+    })
+    console.log('[Chrome layers] mesh names:', [...new Set(structNames)])
+
     // ── Helpers ───────────────────────────────────────────────────────────
     function glowObj(tl, obj, color, intensity, startT, dur) {
       const C = new THREE.Color(color)

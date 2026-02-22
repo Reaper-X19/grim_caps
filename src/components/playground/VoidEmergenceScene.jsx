@@ -1,16 +1,16 @@
 /**
- * Shatter — Scatter & Reform  (Clean Rewrite)
+ * Shatter — Scatter & Reform  (v2 — Wide Burst + Reverse Convergence)
  *
- * STORY:
- *   Explosion → Hover → Snap back → Hold
- *
- * JAW-DROP DETAILS:
- *  • Keys rotate on all 3 axes during flight (glass shards tumbling)
- *  • A white point-light FLASH fires at t=0 and exponentially decays
- *  • Camera phaseRef updated by GSAP callbacks (zero drift from animation)
- *  • Camera shake at explosion via a decaying offset ref
- *  • Light drops extremely low during hold phase (moody, close-up)
- *  • Ambient = 0.20, single strong overhead spot — contrast is king
+ * CHANGES FROM v1:
+ *  • Explosion radius: 0.45-0.85 → 0.85-1.60 local (14.5-27 world) — fills viewport
+ *  • Keycaps explode WITH upward bias (elev bias +0.15) for a shower-burst feel
+ *  • SCATTER HOLD: 2.2s — keys tumble in place (scatterRef per-key spinY)
+ *  • CONVERGENCE (was "snap"): slow 2.2s power2.out — keys drift back gracefully
+ *    like a reverse explosion in slow motion, NOT a sudden snap
+ *  • Stagger on convergence: each key starts at its own random offset (0-0.4s)
+ *    so they don't all arrive at the same time — ripple of landing
+ *  • Camera: pulls far back during explode (z=11), then slowly glides back in
+ *  • Keys still have emissive during flight, fades on landing
  */
 import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
@@ -18,28 +18,26 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 
-// Camera target per phase
 const CAM = {
-  idle:    { x: 0.5, y: 2.0, z: 5.2 },
-  explode: { x: 1.0, y: 3.0, z: 9.0 },
-  snap:    { x: 0.4, y: 1.8, z: 5.0 },
-  hold:    { x: 0.2, y: 1.6, z: 4.6 },
+  idle:    { x: 0.3, y: 2.0, z: 5.5 },
+  explode: { x: 0.8, y: 3.5, z: 11.0 },   // far back — see all scattered keys
+  converge:{ x: 0.5, y: 2.5, z: 8.0 },   // slowly glide in during convergence
+  hold:    { x: 0.2, y: 1.8, z: 5.0 },
 }
 
-// Flash point light intensity (decays in useFrame)
 const flashState = { intensity: 0 }
 
 function CameraRig({ phaseRef, shakeRef }) {
   useFrame(({ camera }) => {
     const tgt   = CAM[phaseRef.current] ?? CAM.idle
-    const alpha = phaseRef.current === 'explode' ? 0.14 : 0.05
+    const alpha = phaseRef.current === 'explode' ? 0.12 : 0.04
     camera.position.x += (tgt.x + shakeRef.current.x - camera.position.x) * alpha
     camera.position.y += (tgt.y + shakeRef.current.y - camera.position.y) * alpha
     camera.position.z += (tgt.z + shakeRef.current.z - camera.position.z) * alpha
-    shakeRef.current.x *= 0.80
-    shakeRef.current.y *= 0.80
-    shakeRef.current.z *= 0.80
-    camera.lookAt(0, 0, 0)
+    shakeRef.current.x *= 0.78
+    shakeRef.current.y *= 0.78
+    shakeRef.current.z *= 0.78
+    camera.lookAt(0, 0.2, 0)
   })
   return null
 }
@@ -49,9 +47,9 @@ function FlashLight() {
   useFrame(() => {
     if (!lightRef.current) return
     lightRef.current.intensity = flashState.intensity
-    flashState.intensity      *= 0.80   // exponential decay ~16 frames
+    flashState.intensity      *= 0.78
   })
-  return <pointLight ref={lightRef} position={[0, 0.5, 0]} color="#ffffff" distance={25} decay={2} intensity={0} />
+  return <pointLight ref={lightRef} position={[0, 0.5, 0]} color="#ffffff" distance={30} decay={2} intensity={0} />
 }
 
 export default function ShatterScene() {
@@ -59,13 +57,13 @@ export default function ShatterScene() {
   const collectedRef  = useRef(false)
   const phaseRef      = useRef('idle')
   const shakeRef      = useRef({ x: 0, y: 0, z: 0 })
-  const scatterRef    = useRef([])   // {mesh, spinY} for hold-phase spin
+  const scatterRef    = useRef([])
 
   useEffect(() => () => gsap.killTweensOf('*'), [])
 
-  // Slow tumble during scatter hold
+  // Slow tumble while scattered
   useFrame((_, delta) => {
-    if (phaseRef.current !== 'explode' && phaseRef.current !== 'snap') return
+    if (phaseRef.current !== 'explode') return
     scatterRef.current.forEach(({ mesh, spinY }) => {
       mesh.rotation.y += spinY * delta
     })
@@ -87,10 +85,11 @@ export default function ShatterScene() {
         keycaps.push(child)
       }
     })
-    // Assign random slow spin speed per keycap for the scatter hold phase
+
+    // Random per-key spin for the tumble phase
     scatterRef.current = keycaps.map(mesh => ({
       mesh,
-      spinY: (Math.random() - 0.5) * 1.6,   // ±0.8 rad/s tumble
+      spinY: (Math.random() - 0.5) * 1.4,
     }))
 
     function buildCycle() {
@@ -102,66 +101,77 @@ export default function ShatterScene() {
             m.material.emissiveIntensity = 0
           })
           phaseRef.current = 'idle'
-          setTimeout(buildCycle, 600)
+          setTimeout(buildCycle, 800)
         }
       })
 
-      // PHASE 1: Explosion — all at once
+      // ── PHASE 1: EXPLOSION (t=0) ─────────────────────────────────────────
       tl.call(() => {
         phaseRef.current = 'explode'
-        flashState.intensity = 18.0   // blinding burst
+        flashState.intensity = 22.0
         shakeRef.current = {
-          x: (Math.random() - 0.5) * 2.0,
-          y: (Math.random() - 0.5) * 1.0,
-          z: 1.8,
+          x: (Math.random() - 0.5) * 2.2,
+          y: (Math.random() - 0.5) * 1.2,
+          z: 2.0,
         }
       }, null, 0)
 
       keycaps.forEach((mesh) => {
         const angle = Math.random() * Math.PI * 2
-        const elev  = (Math.random() - 0.25) * Math.PI * 0.7
-        const dist  = 0.45 + Math.random() * 0.40   // 0.45-0.85 local = 7.6-14.5 world
+        const elev  = (Math.random() - 0.15) * Math.PI * 0.80  // upward bias
+        const dist  = 0.85 + Math.random() * 0.75              // 0.85-1.60 local → 14-27 world
         const ox    = mesh.userData.origPos
         tl.to(mesh.position, {
           x: ox.x + Math.cos(angle) * Math.cos(elev) * dist,
-          y: ox.y + Math.sin(elev)  * dist + 0.12,
+          y: ox.y + Math.sin(elev)  * dist + 0.18,
           z: ox.z + Math.sin(angle) * Math.cos(elev) * dist,
-          duration: 1.8, ease: 'power3.out',
+          duration: 1.6, ease: 'power3.out',
         }, 0)
         tl.to(mesh.rotation, {
-          x: mesh.userData.origRot.x + (Math.random() - 0.5) * Math.PI * 3.5,
-          y: mesh.userData.origRot.y + (Math.random() - 0.5) * Math.PI * 5.0,
-          z: mesh.userData.origRot.z + (Math.random() - 0.5) * Math.PI * 2.5,
-          duration: 1.8, ease: 'power2.out',
+          x: mesh.userData.origRot.x + (Math.random() - 0.5) * Math.PI * 4.0,
+          y: mesh.userData.origRot.y + (Math.random() - 0.5) * Math.PI * 6.0,
+          z: mesh.userData.origRot.z + (Math.random() - 0.5) * Math.PI * 3.0,
+          duration: 1.6, ease: 'power2.out',
         }, 0)
-        tl.to(mesh.material, { emissiveIntensity: 0.30, duration: 0.4 }, 0.15)
+        // Emissive glow while airborne
+        tl.to(mesh.material, { emissiveIntensity: 0.28, duration: 0.5 }, 0.20)
       })
 
-      // PHASE 2: Camera rush-in before keys snap back
-      tl.call(() => { phaseRef.current = 'snap' }, null, 2.0)
+      // ── PHASE 2: SCATTER HOLD (keys tumble freely via useFrame) ──────────
+      const HOLD_START = 1.7
+      tl.to({}, { duration: 2.2 }, HOLD_START)   // 2.2s admire the chaos
 
-      // PHASE 3: Snap back — expo.in rush
+      // ── PHASE 3: CONVERGENCE — slow reverse burst ─────────────────────────
+      const CONV_START = HOLD_START + 2.2
+      tl.call(() => { phaseRef.current = 'converge' }, null, CONV_START)
+
       keycaps.forEach((mesh) => {
-        const d = Math.random() * 0.08
+        // Random stagger so they don't all arrive together (0 to 0.55s offset)
+        const staggerT = CONV_START + Math.random() * 0.55
         tl.to(mesh.position, {
           x: mesh.userData.origPos.x,
           y: mesh.userData.origPos.y,
           z: mesh.userData.origPos.z,
-          duration: 0.55, ease: 'expo.in',
-        }, 2.10 + d)
+          duration: 2.0,          // slow — 2× longer than original
+          ease: 'power2.inOut',   // ease in gently, settle gracefully
+        }, staggerT)
         tl.to(mesh.rotation, {
           x: mesh.userData.origRot.x,
           y: mesh.userData.origRot.y,
           z: mesh.userData.origRot.z,
-          duration: 0.55, ease: 'expo.in',
-        }, 2.10 + d)
-        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.20 }, 2.50)
+          duration: 2.0,
+          ease: 'power2.inOut',
+        }, staggerT)
+        // Emissive fades as each key lands
+        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.40 }, staggerT + 1.65)
       })
 
-      // PHASE 4: Hold assembled
-      tl.call(() => { phaseRef.current = 'hold' }, null, 3.4)
-      tl.to({}, { duration: 1.5 })
+      // ── PHASE 4: HOLD ASSEMBLED ───────────────────────────────────────────
+      const ASSEMBLE_END = CONV_START + 0.55 + 2.0 + 0.20
+      tl.call(() => { phaseRef.current = 'hold' }, null, ASSEMBLE_END)
+      tl.to({}, { duration: 2.0 }, ASSEMBLE_END)
     }
+
     buildCycle()
   })
 
