@@ -55,12 +55,21 @@ function FlashLight() {
 }
 
 export default function ShatterScene() {
-  const groupRef     = useRef()
-  const collectedRef = useRef(false)
-  const phaseRef     = useRef('idle')
-  const shakeRef     = useRef({ x: 0, y: 0, z: 0 })
+  const groupRef      = useRef()
+  const collectedRef  = useRef(false)
+  const phaseRef      = useRef('idle')
+  const shakeRef      = useRef({ x: 0, y: 0, z: 0 })
+  const scatterRef    = useRef([])   // {mesh, spinY} for hold-phase spin
 
   useEffect(() => () => gsap.killTweensOf('*'), [])
+
+  // Slow tumble during scatter hold
+  useFrame((_, delta) => {
+    if (phaseRef.current !== 'explode' && phaseRef.current !== 'snap') return
+    scatterRef.current.forEach(({ mesh, spinY }) => {
+      mesh.rotation.y += spinY * delta
+    })
+  })
 
   useFrame(() => {
     if (!groupRef.current || collectedRef.current) return
@@ -78,6 +87,11 @@ export default function ShatterScene() {
         keycaps.push(child)
       }
     })
+    // Assign random slow spin speed per keycap for the scatter hold phase
+    scatterRef.current = keycaps.map(mesh => ({
+      mesh,
+      spinY: (Math.random() - 0.5) * 1.6,   // ±0.8 rad/s tumble
+    }))
 
     function buildCycle() {
       const tl = gsap.timeline({

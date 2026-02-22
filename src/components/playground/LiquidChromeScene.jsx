@@ -28,9 +28,10 @@ const LAYER_DEFS = [
   { id: 'keycaps',  delta: +SPREAD * 3,   color: '#c8d8ff', matchMesh:  n => n.startsWith('K_') || n === 'Knob' || n === 'Screen' },
   { id: 'switches', delta: +SPREAD * 2,   color: '#cc44ff', matchGroup: 'Switches_Positions' },
   { id: 'pcb',      delta: +SPREAD * 1,   color: '#22dd88', matchMesh:  n => n === 'PCB' },
-  // USER FIX: plate (steel/white) now 4th from bottom, gold piece is 3rd from bottom
-  { id: 'plate',    delta: +SPREAD * 0.3, color: '#8899cc', matchMesh:  n => n === 'Plate' },
-  { id: 'emission', delta: -SPREAD * 1,   color: '#f0c860', matchMesh:  n => n.toLowerCase().includes('emission') },
+  // emission (white glow strips) — 4th from bottom, barely above centre
+  { id: 'emission', delta: +SPREAD * 0.3, color: '#aaddff', matchMesh:  n => n.toLowerCase().includes('emission') },
+  // Plate = the GOLD/BRASS mounting plate — 3rd from bottom (USER FIX ✓)
+  { id: 'plate',    delta: -SPREAD * 1,   color: '#c8a84b', matchMesh:  n => n === 'Plate' },
   { id: 'case',     delta: -SPREAD * 2,   color: '#a0b8cc', matchMesh:  n => n === 'Top_Case' },
   { id: 'weight',   delta: -SPREAD * 3,   color: '#b87333', matchMesh:  n => n === 'Weight' },
 ]
@@ -46,8 +47,8 @@ const EXPLODE_STEPS = [
 
 // Reassemble: inner fills first
 const REASSEMBLE_STEPS = [
-  ['emission', 'pcb'],
-  ['plate'],
+  ['pcb', 'emission'],   // green + white strips click in
+  ['plate'],            // brass plate seats
   ['case'],
   ['switches'],
 ]

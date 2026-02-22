@@ -87,7 +87,7 @@ function SceneCanvas({ anim, onCreated }) {
   return (
     <Canvas
       key={anim.id}
-      gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       dpr={[1, 1.5]}
       shadows
       onCreated={onCreated}
@@ -159,6 +159,8 @@ export default function PlaygroundPage() {
   }, [idx])
 
   const handleCreated = useCallback(({ gl }) => {
+    // Transparent WebGL clear so CSS gradient behind canvas shows through
+    gl.setClearColor(0x000000, 0)
     gl.domElement.addEventListener('webglcontextlost', (e) => e.preventDefault())
   }, [])
 

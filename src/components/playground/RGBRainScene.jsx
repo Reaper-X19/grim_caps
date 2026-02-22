@@ -78,6 +78,9 @@ export default function ResonanceScene() {
     // Ripple order: symmetric from centre rows (2&3) outward (0&5)
     const expandOrder = [[2, 3], [1, 4], [0, 5]]
 
+    // Row amplitude: centre rows (2&3) lift MOST — physical wave behaviour
+    const AMP = [0.55, 0.78, 1.0, 1.0, 0.78, 0.55]
+
     function buildCycle() {
       const tl = gsap.timeline({ onComplete: buildCycle })
 
@@ -88,35 +91,31 @@ export default function ResonanceScene() {
           const row = rows[rowIdx]
           if (!row?.length) return
 
+          const amp      = LIFT * (AMP[rowIdx] ?? 1.0)
           const materials = row.map(m => m.material)
-          // Stagger direction alternates per row for ripple-within-ripple feel
           const dir = rowIdx % 2 === 0 ? 1 : -1
 
-          // RISE — explicit target (origY + LIFT) so it can NEVER overshoot above
           row.forEach((mesh, mi) => {
             tl.to(mesh.position, {
-              y: mesh.userData.origY + LIFT,
+              y: mesh.userData.origY + amp,
               duration: RISE_DUR,
               ease: 'power3.out',
               delay: mi * dir * 0.006,
             }, t)
           })
 
-          // Gold emissive flash at peak
           tl.to(materials, {
-            emissiveIntensity: 0.65,
+            emissiveIntensity: 0.50 + amp * 0.22,  // brighter glow at peak
             duration: RISE_DUR * 0.4,
             stagger: dir * 0.006,
             onStart() { materials.forEach(m => m.emissive?.copy(PEAK_COLOR)) },
           }, t)
 
-          // Dim before fall
           tl.to(materials, {
             emissiveIntensity: 0.18,
             duration: RISE_DUR * 0.35,
           }, t + RISE_DUR * 0.55)
 
-          // FALL — explicit target (origY) — CANNOT go below rest position
           row.forEach((mesh, mi) => {
             tl.to(mesh.position, {
               y: mesh.userData.origY,
@@ -126,7 +125,6 @@ export default function ResonanceScene() {
             }, t + RISE_DUR * 0.70)
           })
 
-          // Emissive fades as key settles
           tl.to(materials, {
             emissiveIntensity: 0,
             duration: FALL_DUR * 0.85,
