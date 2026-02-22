@@ -97,7 +97,6 @@ export default function CyberPulseScene() {
         const waveT    = colIdx * COLUMN_DELAY
         const waveNorm = colIdx / (columns.length - 1)
 
-        // Spotlight moves to wave front
         tl.call(() => {
           progressRef.current = waveNorm
           if (spotRef.current) {
@@ -106,18 +105,19 @@ export default function CyberPulseScene() {
           }
         }, null, waveT)
 
-        const positions = colMeshes.map(m => m.position)
         const materials = colMeshes.map(m => m.material)
 
-        // RISE — keys heave up with stagger within column
-        tl.to(positions, {
-          y: `+=${LIFT}`,
-          duration: LIFT_DUR,
-          ease: 'power3.out',
-          stagger: 0.008,
-        }, waveT)
+        // RISE — explicit target (origY + LIFT), never overshoots
+        colMeshes.forEach((mesh, mi) => {
+          tl.to(mesh.position, {
+            y: mesh.userData.origY + LIFT,
+            duration: LIFT_DUR,
+            ease: 'power3.out',
+            delay: mi * 0.008,
+          }, waveT)
+        })
 
-        // Emissive: bright flash rising, trailing glow falling
+        // Emissive flash
         tl.to(materials, {
           emissiveIntensity: 0.70,
           duration: LIFT_DUR * 0.3,
@@ -125,18 +125,20 @@ export default function CyberPulseScene() {
           onStart() { materials.forEach(m => m.emissive?.copy(accent)) },
         }, waveT)
 
-        // FALL — slower, damped, slight overshoot
-        tl.to(positions, {
-          y: `-=${LIFT}`,
-          duration: FALL_DUR,
-          ease: 'back.out(1.4)',   // tiny overshoot below rest = mechanical snap
-          stagger: 0.008,
-        }, waveT + LIFT_DUR * 0.6)
+        // FALL — explicit target (origY) — CANNOT go below rest position
+        colMeshes.forEach((mesh, mi) => {
+          tl.to(mesh.position, {
+            y: mesh.userData.origY,
+            duration: FALL_DUR,
+            ease: 'power3.out',
+            delay: mi * 0.008,
+          }, waveT + LIFT_DUR * 0.6)
+        })
 
-        // Trailing glow
+        // Trailing glow fades after fall
         tl.to(materials, {
           emissiveIntensity: 0,
-          duration: FALL_DUR * 1.2,   // lingers past fall
+          duration: FALL_DUR * 1.2,
           stagger: 0.008,
         }, waveT + LIFT_DUR * 0.5)
       })
