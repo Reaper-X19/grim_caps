@@ -119,7 +119,7 @@ export default function ShatterScene() {
       keycaps.forEach((mesh) => {
         const angle = Math.random() * Math.PI * 2
         const elev  = (Math.random() - 0.15) * Math.PI * 0.80  // upward bias
-        const dist  = 0.85 + Math.random() * 0.75              // 0.85-1.60 local → 14-27 world
+        const dist  = 0.22 + Math.random() * 0.28              // 0.22-0.50 local → 3.7-8.5 world
         const ox    = mesh.userData.origPos
         tl.to(mesh.position, {
           x: ox.x + Math.cos(angle) * Math.cos(elev) * dist,
