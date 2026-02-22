@@ -1,19 +1,22 @@
 /**
- * GlossyKeyboardHero — Cinematic Hero Keyboard (v2)
+ * GlossyKeyboardHero — Cinematic Hero Keyboard (v3)
  *
- * CINEMATIC INTRO:
- *   1. Keyboard starts FAR below (y: -4 local → 0), opacity 0
- *   2. 1.4s power3.out rise — "emerges from the void"
- *   3. Emission sweep L→R once assembled (instead of immediate glow)
- *   4. Settle into gentle Y-float (breathing)
+ * JERK FIX: Separated into 3 group layers so GSAP and useFrame NEVER
+ * write to the same property on the same object:
+ *   floatRef  → useFrame breathing (position.y only)
+ *   introRef  → GSAP intro (position.y + rotation.z + scale)
+ *   mouseRef  → useFrame mouse parallax (rotation.x/y only)
+ *   groupRef  → Leva controls (position/rotation/scale final)
  *
- * MOUSE PARALLAX:
- *   Mouse X → keyboard rotation Y  (left/right tilt)
- *   Mouse Y → keyboard rotation X  (forward/back tilt)
- *   Smooth lerp so it trails the cursor, never snaps
- *   Strength tunable — subtle enough to feel immersive, not nauseating
+ * INTRO (GSAP, introRef):
+ *   t=0.00  rise from y=-3.5 with power3.out, z-tilt corrects
+ *   t=0.10  Y-swing (rotates then settles)
+ *   t=1.50  impact thud: y → -0.08, squash-stretch on scale
+ *   t=1.60  elastic bounce back → y=0, scale=1
+ *   After t=2.1s: breathing float starts (floatRef, separate group)
  *
- * NO ORBIT CONTROLS — camera is locked
+ * MOUSE PARALLAX (subtle):
+ *   max ±0.05 rad Y, ±0.035 rad X — barely noticeable, feels immersive
  */
 import { useRef, useEffect } from 'react'
 import * as THREE from 'three'
@@ -23,10 +26,9 @@ import gsap from 'gsap'
 import { KeyboardGlossyModel } from './Keyboard_Glossy'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from '../playground/keyboardLayout'
 
-// ─── Camera with mouse parallax ──────────────────────────────────────────────
+// ─── Camera with mouse parallax (very subtle) ─────────────────────────────────
 export function HeroCameraRig({ mouse }) {
   useFrame(({ camera }) => {
-    // Very subtle camera lean toward the cursor
     const tx = (mouse?.current?.x ?? 0) * 0.12
     const ty = (mouse?.current?.y ?? 0) * 0.07 + 0.05
     camera.position.x += (tx - camera.position.x) * 0.035
@@ -36,17 +38,13 @@ export function HeroCameraRig({ mouse }) {
   return null
 }
 
-// ─── Column wave (fixed: absolute origY targets) ─────────────────────────────
+// ─── Column wave ──────────────────────────────────────────────────────────────
 function useColumnWave(groupRef, {
-  lift = 0.06,
-  duration = 0.4,
-  columnDelay = 0.042,
-  interval = 5000,
-  accentColor = '#00ffcc',
+  lift = 0.06, duration = 0.4, columnDelay = 0.042,
+  interval = 5000, accentColor = '#00ffcc',
 } = {}) {
   useEffect(() => {
-    let timeout
-    let tl = null
+    let timeout, tl = null
     function runWave() {
       if (!groupRef.current) { timeout = setTimeout(runWave, 200); return }
       const columns = resolveLayout(KEYBOARD_COLUMNS, buildMeshMap(groupRef.current))
@@ -71,17 +69,20 @@ function useColumnWave(groupRef, {
         tl.to(mats, { emissiveIntensity: 0, duration: duration * 0.7, stagger: 0.005 }, t + duration * 0.55)
       })
     }
-    timeout = setTimeout(runWave, 2800)   // wait for intro animation to finish
+    timeout = setTimeout(runWave, 3000)   // after intro finishes
     return () => { clearTimeout(timeout); tl?.kill() }
   }, []) // eslint-disable-line
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function GlossyKeyboardHero({ mouse }) {
-  const groupRef    = useRef()
-  const wrapperRef  = useRef()   // wrapper for intro animation
+  const groupRef    = useRef()    // Leva position / rotation / scale
+  const mouseWrapRef= useRef()    // useFrame: mouse rotation only
+  const introRef    = useRef()    // GSAP intro: y-position + scale (never breathe)
+  const floatRef    = useRef()    // useFrame: breathing Y only — never GSAP
   const readyRef    = useRef(false)
-  const mouseRotRef = useRef({ x: 0, y: 0 })  // smoothed rotation from mouse
+  const mouseRotRef = useRef({ x: 0, y: 0 })
+  const introDoneRef= useRef(false)  // breathing starts only after this is true
 
   const {
     posX, posY, posZ,
@@ -106,7 +107,7 @@ export default function GlossyKeyboardHero({ mouse }) {
     waveEnabled: { value: true, label: 'Hero Wave' },
   })
 
-  // Apply materials
+  // Apply materials + trigger intro (once)
   useEffect(() => {
     if (!groupRef.current) return
     const emissiveColor = new THREE.Color(emissionColor)
@@ -135,47 +136,49 @@ export default function GlossyKeyboardHero({ mouse }) {
       child.material.needsUpdate = true
     })
 
-    // ── Cinematic intro (runs only once) ──────────────────────────────
-    if (!readyRef.current && wrapperRef.current) {
+    // ── Cinematic intro — ONLY touches introRef ──────────────────────────────
+    if (!readyRef.current && introRef.current) {
       readyRef.current = true
-      const wrapper = wrapperRef.current
+      const intro = introRef.current
 
-      // Start from below, invisible
-      wrapper.position.y = -4
-      wrapper.rotation.z = -0.15
+      // Reset to starting pose
+      intro.position.y = -3.5
+      intro.rotation.z = -0.14
+      intro.scale.set(1, 1, 1)
 
-      // Rise from void, then cinematic landing
       gsap.timeline()
-        .to(wrapper.position, { y: 0, duration: 1.55, ease: 'power3.out' }, 0)
-        .to(wrapper.rotation, { z: 0, duration: 1.55, ease: 'power3.out' }, 0)
-        .from(wrapper.rotation, { y: -0.28, duration: 1.35, ease: 'power2.out' }, 0.1)
-        // ── Landing thud: dip slightly, bounce back ──
-        .to(wrapper.position, { y: -0.10, duration: 0.10, ease: 'power3.in'  }, 1.50)
-        .to(wrapper.position, { y:  0,    duration: 0.55, ease: 'elastic.out(1, 0.45)' }, 1.60)
-        // Scale squish on impact
-        .to(wrapper.scale, { x: 1.022, y: 0.96, z: 1.022, duration: 0.10, ease: 'power3.in'  }, 1.50)
-        .to(wrapper.scale, { x: 1,     y: 1,    z: 1,     duration: 0.40, ease: 'elastic.out(1, 0.5)' }, 1.60)
+        // Rise from below
+        .to(intro.position, { y: 0, duration: 1.55, ease: 'power3.out' }, 0)
+        .to(intro.rotation, { z: 0, duration: 1.55, ease: 'power3.out' }, 0)
+        .from(intro.rotation, { y: -0.28, duration: 1.35, ease: 'power2.out' }, 0.1)
+        // ── Landing thud ──
+        .to(intro.position, { y: -0.10, duration: 0.10, ease: 'power3.in' }, 1.50)
+        .to(intro.position, { y: 0,     duration: 0.55, ease: 'elastic.out(1, 0.40)' }, 1.60)
+        // Squash-and-stretch: ONLY on introRef.scale, not on groupRef.scale
+        .to(intro.scale, { x: 1.020, y: 0.962, z: 1.020, duration: 0.10, ease: 'power3.in'  }, 1.50)
+        .to(intro.scale, { x: 1,     y: 1,     z: 1,     duration: 0.42, ease: 'elastic.out(1, 0.5)' }, 1.60)
+        // Signal that breathing can start
+        .call(() => { introDoneRef.current = true }, null, 2.15)
     }
   }, [emissionColor, emissionIntensity, keycapEmissionIntensity, metalness, roughness])
 
-  // Mouse → smooth rotation, plus breathing float
+  // Mouse parallax → mouseWrapRef.rotation (NEVER touches position or scale)
+  // Breathing → floatRef.position.y (NEVER touches introRef)
   useFrame(({ clock }) => {
-    if (!wrapperRef.current) return
+    // Mouse rotation
+    if (mouseWrapRef.current) {
+      const mx = mouse?.current?.x ?? 0
+      const my = mouse?.current?.y ?? 0
+      mouseRotRef.current.x += (my * -0.035 - mouseRotRef.current.x) * 0.06
+      mouseRotRef.current.y += (mx *  0.050 - mouseRotRef.current.y) * 0.06
+      mouseWrapRef.current.rotation.x = mouseRotRef.current.x
+      mouseWrapRef.current.rotation.y = mouseRotRef.current.y
+    }
 
-    // Mouse parallax — very subtle (max ±0.05 rad X, ±0.035 rad Y)
-    const mouseX = mouse?.current?.x ?? 0
-    const mouseY = mouse?.current?.y ?? 0
-    mouseRotRef.current.x += (mouseY * -0.035 - mouseRotRef.current.x) * 0.06
-    mouseRotRef.current.y += (mouseX *  0.050 - mouseRotRef.current.y) * 0.06
-
-    // Breathing float — runs continuously after intro settles
-    const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.04
-
-    wrapperRef.current.rotation.x = mouseRotRef.current.x
-    wrapperRef.current.rotation.y = mouseRotRef.current.y
-    // Only add breathe offset after intro is roughly done (1.8s)
-    if (clock.elapsedTime > 2.1) {
-      wrapperRef.current.position.y += (breathe - wrapperRef.current.position.y) * 0.04
+    // Breathing — separate floatRef, NEVER touched by GSAP
+    if (floatRef.current && introDoneRef.current) {
+      const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.038
+      floatRef.current.position.y += (breathe - floatRef.current.position.y) * 0.045
     }
   })
 
@@ -185,10 +188,17 @@ export default function GlossyKeyboardHero({ mouse }) {
   })
 
   return (
-    // wrapperRef: animated by intro GSAP and mouse parallax useFrame
-    <group ref={wrapperRef}>
-      <group ref={groupRef} position={[posX, posY, posZ]} rotation={[rotX, rotY, rotZ]} scale={scale}>
-        <KeyboardGlossyModel />
+    // floatRef → breathing (useFrame, position.y only)
+    <group ref={floatRef}>
+      {/* introRef → GSAP intro (position.y, rotation.z, scale) */}
+      <group ref={introRef}>
+        {/* mouseWrapRef → mouse rotation (rotation.x/y only) */}
+        <group ref={mouseWrapRef}>
+          {/* groupRef → Leva controls */}
+          <group ref={groupRef} position={[posX, posY, posZ]} rotation={[rotX, rotY, rotZ]} scale={scale}>
+            <KeyboardGlossyModel />
+          </group>
+        </group>
       </group>
     </group>
   )
