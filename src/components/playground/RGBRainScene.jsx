@@ -88,49 +88,50 @@ export default function ResonanceScene() {
           const row = rows[rowIdx]
           if (!row?.length) return
 
-          const positions = row.map(m => m.position)
           const materials = row.map(m => m.material)
+          // Stagger direction alternates per row for ripple-within-ripple feel
+          const dir = rowIdx % 2 === 0 ? 1 : -1
 
-          // Within-row stagger: alternates L→R and R→L for ripple within ripple
-          const stagger = rowIdx % 2 === 0 ? 0.006 : -0.006
-
-          // RISE — dramatic, fast snap up
-          tl.to(positions, {
-            y: `+=${LIFT}`,
-            duration: RISE_DUR,
-            ease: 'power3.out',
-            stagger,
-          }, t)
+          // RISE — explicit target (origY + LIFT) so it can NEVER overshoot above
+          row.forEach((mesh, mi) => {
+            tl.to(mesh.position, {
+              y: mesh.userData.origY + LIFT,
+              duration: RISE_DUR,
+              ease: 'power3.out',
+              delay: mi * dir * 0.006,
+            }, t)
+          })
 
           // Gold emissive flash at peak
           tl.to(materials, {
             emissiveIntensity: 0.65,
             duration: RISE_DUR * 0.4,
-            stagger,
+            stagger: dir * 0.006,
             onStart() { materials.forEach(m => m.emissive?.copy(PEAK_COLOR)) },
           }, t)
 
-          // Fade to blue before fall
+          // Dim before fall
           tl.to(materials, {
-            emissiveIntensity: 0.15,
-            duration: RISE_DUR * 0.4,
-          }, t + RISE_DUR * 0.5)
+            emissiveIntensity: 0.18,
+            duration: RISE_DUR * 0.35,
+          }, t + RISE_DUR * 0.55)
 
-          // FALL — slower, damped back below rest (back.out for mechanical snap)
-          tl.to(positions, {
-            y: `-=${LIFT}`,
-            duration: FALL_DUR,
-            ease: 'back.out(1.2)',
-            stagger,
-          }, t + RISE_DUR * 0.75)
+          // FALL — explicit target (origY) — CANNOT go below rest position
+          row.forEach((mesh, mi) => {
+            tl.to(mesh.position, {
+              y: mesh.userData.origY,
+              duration: FALL_DUR,
+              ease: 'power3.out',
+              delay: mi * dir * 0.006,
+            }, t + RISE_DUR * 0.70)
+          })
 
-          // Emissive fully out as key settles
+          // Emissive fades as key settles
           tl.to(materials, {
             emissiveIntensity: 0,
-            duration: FALL_DUR * 0.8,
-            stagger,
-            onComplete() { materials.forEach(m => m.emissive.copy(REST_COLOR)) },
-          }, t + RISE_DUR * 0.8)
+            duration: FALL_DUR * 0.85,
+            stagger: dir * 0.006,
+          }, t + RISE_DUR * 0.80)
         })
       })
 
