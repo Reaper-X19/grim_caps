@@ -11,6 +11,7 @@ import GalleryPage from './pages/GalleryPage'
 import ContactPage from './pages/ContactPage'
 import CartPage from './pages/CartPage'
 import MyDesignsPage from './pages/MyDesignsPage'
+import PlaygroundPage from './pages/PlaygroundPage'
 import { onAuthStateChange } from './services/auth'
 import useAuthStore from './store/authStore'
 
@@ -98,6 +99,7 @@ function App() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/my-designs" element={<MyDesignsPage />} />
+          <Route path="/playground" element={<PlaygroundPage />} />
         </Routes>
       </div>
     </Layout>

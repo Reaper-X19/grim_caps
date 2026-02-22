@@ -56,6 +56,9 @@ export default function Navbar() {
               <Link to="/contact" className="text-sm font-medium text-white hover:text-grim-accent transition-colors">
                 Contact
               </Link>
+              <Link to="/playground" className="text-sm font-medium text-white hover:text-grim-accent transition-colors">
+                Playground
+              </Link>
             </div>
 
             {/* Right Side - Auth & Cart */}
@@ -105,6 +108,9 @@ export default function Navbar() {
               </Link>
               <Link to="/contact" className="block px-3 py-2 text-white hover:text-grim-accent">
                 Contact
+              </Link>
+              <Link to="/playground" className="block px-3 py-2 text-white hover:text-grim-accent">
+                Playground
               </Link>
 
               {/* Mobile Auth */}
