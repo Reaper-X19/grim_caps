@@ -1,17 +1,21 @@
 /**
- * GlossyKeyboardHero — Cinematic Hero Keyboard (v4 — SPIN)
+ * GlossyKeyboardHero — Cinematic Hero Keyboard (v5)
  *
- * ANIMATION:
- *   Intro: keyboard rises from below + SPINS fast on Y-axis (coin-flip entry)
- *   Landing: spin decelerates dramatically when it thuds
- *   After landing: slow continuous Y-rotation (showroom turntable, ~30s/rev)
- *   Breathing: gentle Y-float runs independently on floatRef
- *   Mouse parallax: very subtle X-tilt (Y is controlled by spin)
+ * ON LOAD:
+ *   1. Keyboard rises from below (power3.out, 1.55s) — same cinematic entry
+ *   2. Simultaneously: ONE full 360° Y-rotation via GSAP (power3.inOut, 1.8s)
+ *      Ends exactly at y=0 (facing camera) — mathematically precise
+ *   3. Landing thud at t=1.5s: squash-and-stretch on introRef
  *
- * LAYER STACK (no conflicts):
- *   floatRef   → useFrame: breathing Y only
- *   introRef   → GSAP: rise + squash — never breathe
- *   spinRef    → useFrame: Y-spin only (speed lerps from fast → slow)
+ * IDLE (after t=2.15s):
+ *   Subtle rocking oscillation: sin(t * 0.35) * 0.12 rad (≈ ±7°)
+ *   NOT a continuous revolution — just a gentle, lifelike sway
+ *   Mouse X also contributes to the Y-look (very subtle)
+ *
+ * LAYER STACK (zero conflicts):
+ *   floatRef   → useFrame: breathing Y-position only
+ *   introRef   → GSAP:     rise + squash/stretch (position.y, scale)
+ *   spinRef    → GSAP (360° intro) + useFrame (idle sway) — sequential, no overlap
  *   mouseWrapRef→ useFrame: mouse X-tilt only
  *   groupRef   → Leva controls
  */
@@ -36,16 +40,16 @@ export function HeroCameraRig({ mouse }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function GlossyKeyboardHero({ mouse }) {
-  const groupRef     = useRef()     // Leva controls
-  const mouseWrapRef = useRef()     // useFrame: mouse X-tilt only
-  const spinRef      = useRef()     // useFrame: Y-spin only
-  const introRef     = useRef()     // GSAP: rise + squash
-  const floatRef     = useRef()     // useFrame: breathing Y only
+  const groupRef      = useRef()
+  const mouseWrapRef  = useRef()
+  const spinRef       = useRef()
+  const introRef      = useRef()
+  const floatRef      = useRef()
 
-  const readyRef       = useRef(false)
-  const introDoneRef   = useRef(false)
-  const spinSpeedRef   = useRef(3.8)   // rad/s — fast during intro, slows after landing
-  const mouseRotX      = useRef(0)     // smoothed mouse X-tilt
+  const readyRef      = useRef(false)
+  const introDoneRef  = useRef(false)
+  const idleStartRef  = useRef(0)     // clock.elapsedTime when idle began
+  const mouseRotX     = useRef(0)
 
   const {
     posX, posY, posZ,
@@ -68,7 +72,6 @@ export default function GlossyKeyboardHero({ mouse }) {
     roughness:  { value: 0.30, min: 0, max: 1, step: 0.05 },
   })
 
-  // Materials + GSAP intro
   useEffect(() => {
     if (!groupRef.current) return
     const emissiveColor = new THREE.Color(emissionColor)
@@ -97,51 +100,63 @@ export default function GlossyKeyboardHero({ mouse }) {
       child.material.needsUpdate = true
     })
 
-    if (!readyRef.current && introRef.current) {
+    if (!readyRef.current && introRef.current && spinRef.current) {
       readyRef.current = true
-      const intro = introRef.current
 
-      intro.position.y = -3.5
-      intro.rotation.z = -0.12
-      intro.scale.set(1, 1, 1)
+      // Reset starting poses
+      introRef.current.position.y = -3.5
+      introRef.current.rotation.z = -0.12
+      introRef.current.scale.set(1, 1, 1)
+      spinRef.current.rotation.y   = 0
 
-      gsap.timeline()
-        // Rise from void
-        .to(intro.position, { y: 0, duration: 1.55, ease: 'power3.out' }, 0)
-        .to(intro.rotation, { z: 0, duration: 1.55, ease: 'power3.out' }, 0)
-        // Landing thud on introRef — GSAP owns this, never useFrame
-        .to(intro.position, { y: -0.10, duration: 0.10, ease: 'power3.in' }, 1.50)
-        .to(intro.position, { y: 0,     duration: 0.55, ease: 'elastic.out(1, 0.40)' }, 1.60)
-        // Squash-and-stretch on introRef.scale only
-        .to(intro.scale, { x: 1.022, y: 0.960, z: 1.022, duration: 0.10, ease: 'power3.in' }, 1.50)
-        .to(intro.scale, { x: 1,     y: 1,     z: 1,     duration: 0.42, ease: 'elastic.out(1, 0.5)' }, 1.60)
-        // Signal landing done → spin slows, breathing starts
-        .call(() => { introDoneRef.current = true }, null, 2.15)
+      const tl = gsap.timeline()
+
+      // ── Rise from below (introRef) ──────────────────────────────────────
+      tl.to(introRef.current.position, { y: 0, duration: 1.55, ease: 'power3.out' }, 0)
+      tl.to(introRef.current.rotation, { z: 0, duration: 1.55, ease: 'power3.out' }, 0)
+
+      // ── ONE full 360° spin (spinRef) — ends exactly at y = 2π ≡ 0 ──────
+      tl.to(spinRef.current.rotation, {
+        y: Math.PI * 2,        // exactly one revolution
+        duration: 1.80,
+        ease: 'power3.inOut',  // accelerate → decelerate — cinematic
+      }, 0)
+
+      // ── Landing thud (introRef — scale & position, GSAP only) ──────────
+      tl.to(introRef.current.position, { y: -0.10, duration: 0.10, ease: 'power3.in'  }, 1.50)
+      tl.to(introRef.current.position, { y: 0,     duration: 0.55, ease: 'elastic.out(1, 0.40)' }, 1.60)
+      tl.to(introRef.current.scale, { x: 1.022, y: 0.960, z: 1.022, duration: 0.10, ease: 'power3.in' }, 1.50)
+      tl.to(introRef.current.scale, { x: 1,     y: 1,     z: 1,     duration: 0.42, ease: 'elastic.out(1, 0.5)' }, 1.60)
+
+      // ── After landing: reset spinRef.y to 0 precisely, begin idle ──────
+      tl.call(() => {
+        if (spinRef.current) spinRef.current.rotation.y = 0  // clean centre position
+        introDoneRef.current = true
+      }, null, 2.15)
     }
   }, [emissionColor, emissionIntensity, keycapEmissionIntensity, metalness, roughness])
 
-  // All useFrame motion — each ref owned exclusively
-  useFrame(({ clock }, delta) => {
-    // ── Spin: Y rotation on spinRef ──────────────────────────────────────
-    if (spinRef.current) {
-      // Target speed: fast during intro (3.8 rad/s), slow after landing (0.22 rad/s)
-      const targetSpeed = introDoneRef.current ? 0.22 : 3.8
-      // Decelerate dramatically: snap faster when slowing down for dramatic effect
-      const lerpFactor = introDoneRef.current ? 0.025 : 0.006
-      spinSpeedRef.current += (targetSpeed - spinSpeedRef.current) * lerpFactor
-      spinRef.current.rotation.y += spinSpeedRef.current * delta
+  useFrame(({ clock }) => {
+    // ── Idle sway: subtle ±7° oscillation — only after intro ───────────────
+    if (spinRef.current && introDoneRef.current) {
+      // Record when idle started so sin starts from 0 (keyboard faces forward)
+      if (idleStartRef.current === 0) idleStartRef.current = clock.elapsedTime
+      const t = clock.elapsedTime - idleStartRef.current
+      // Smooth sway: gentle pendulum — NOT a continuous revolution
+      const mouseYaw = (mouse?.current?.x ?? 0) * 0.04   // tiny mouse influence
+      spinRef.current.rotation.y = Math.sin(t * 0.35) * 0.12 + mouseYaw
     }
 
-    // ── Mouse X-tilt on mouseWrapRef (Y-axis is the spin, so only X here) ──
+    // ── Mouse X-tilt (mouseWrapRef) ─────────────────────────────────────────
     if (mouseWrapRef.current) {
       const my = mouse?.current?.y ?? 0
-      mouseRotX.current += (my * -0.040 - mouseRotX.current) * 0.06
+      mouseRotX.current += (my * -0.035 - mouseRotX.current) * 0.06
       mouseWrapRef.current.rotation.x = mouseRotX.current
     }
 
-    // ── Breathing float on floatRef — only after intro done ─────────────
+    // ── Breathing float (floatRef — separate, never touched by GSAP) ───────
     if (floatRef.current && introDoneRef.current) {
-      const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.040
+      const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.038
       floatRef.current.position.y += (breathe - floatRef.current.position.y) * 0.045
     }
   })
