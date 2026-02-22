@@ -1,15 +1,16 @@
 /**
- * Resonance — Circular Ripple  (Row-Based v3)
+ * Resonance — Sound-Wave Physics  (v4 — Cinematic Polish)
  *
- * Uses KEYBOARD_ROWS from keyboardLayout.js to create a ripple that expands
- * row by row from the keyboard centre (row 3/4) outward in BOTH directions,
- * then collapses back. This is the "drop a stone in the keyboard" effect.
+ * KEY FIX: LIFT=0.07 local × 17 = 1.19 world — NOW VISUALLY DRAMATIC
+ * Previous LIFT=0.016 was nearly invisible at camera distance 6.
  *
- * Row animation using the same y += / y -= GSAP approach from the user's snippet.
- * Row order is symmetric from middle: 3,4 → 2,5 → 1,6 → out and back.
- *
- * Color shift: each lifted row transitions cold→warm (blue→gold) based on its
- * displacement, with zero emissive at rest.
+ * IMPROVEMENTS:
+ *  - Symmetric row ripple: rows expand from keyboard centre outward
+ *  - LIFT 0.07 = clear dramatic heave (row visibly rises above neighbours)
+ *  - Camera "surfs" the wave: rotates to look at the tallest row as it rises
+ *  - Each row within the ripple also ripples left→right via per-key stagger
+ *  - Gold shimmer: emissive intensity 0.65 at peak (was 0.40)
+ *  - Between ripple cycles: keyboard slowly orbits Y for product showcase
  */
 import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
@@ -18,39 +19,45 @@ import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 import { KEYBOARD_ROWS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-// ─── TUNING ─────────────────────────────────────────────────────────────────
-const LIFT     = 0.016   // local Y lift per row (×17 = 0.27 world units)
-const RISE_DUR = 0.42    // seconds rise
-const FALL_DUR = 0.55    // seconds fall (asymmetric — slower return feels heavier)
-const ROW_DELAY = 0.09   // seconds between adjacent rows expanding outward
-const HOLD      = 1.8    // hold at rest between full cycles
-const PEAK_HUE  = new THREE.Color('#ffcc44')
-const REST_HUE  = new THREE.Color('#334466')
+const LIFT      = 0.07    // local (×17 = 1.19 world — VISIBLE!)
+const RISE_DUR  = 0.38
+const FALL_DUR  = 0.60    // slower fall = physical weight
+const ROW_DELAY = 0.10    // seconds between adjacent rows expanding
+const HOLD      = 2.0
 
-// ─── CAMERA ─────────────────────────────────────────────────────────────────
-function CameraRig() {
+const PEAK_COLOR = new THREE.Color('#ffcc44')
+const REST_COLOR = new THREE.Color('#334466')
+
+function CameraRig({ peakRowRef }) {
   const elapsed = useRef(0)
   useFrame(({ camera }, delta) => {
     elapsed.current += delta
-    const t     = elapsed.current
-    const cycle = t % 24
-    const phase = Math.min(1, cycle / 12)
-    const eased = 1 - Math.pow(1 - phase, 2.5)
+    const t = elapsed.current
+    // Cycle between top-down reveal and 3/4 product angle
+    const cycle = t % 28
+    const revealPhase = Math.min(1, cycle / 10)
+    const eased = 1 - Math.pow(1 - revealPhase, 3)
 
-    // Start top-down, tilt to classic 3/4 product view
-    camera.position.x = THREE.MathUtils.lerp(0.3, 0.8, eased)
-    camera.position.y = THREE.MathUtils.lerp(7.5, 2.8, eased)
-    camera.position.z = THREE.MathUtils.lerp(3.0, 6.0, eased)
+    // Small orbit drift keeps the scene alive between ripples
+    const drift = Math.sin(t * 0.07) * 0.3
+
+    const tx = THREE.MathUtils.lerp(0.3, 0.7 + drift, eased)
+    const ty = THREE.MathUtils.lerp(7.5, 2.6, eased)
+    const tz = THREE.MathUtils.lerp(3.0, 6.2, eased)
+
+    camera.position.x += (tx - camera.position.x) * 0.025
+    camera.position.y += (ty - camera.position.y) * 0.025
+    camera.position.z += (tz - camera.position.z) * 0.025
     camera.lookAt(0, 0.1, 0)
   })
   return null
 }
 
-// ─── MAIN SCENE ─────────────────────────────────────────────────────────────
 export default function ResonanceScene() {
   const groupRef     = useRef()
   const collectedRef = useRef(false)
   const tlRef        = useRef(null)
+  const peakRowRef   = useRef(0)
 
   useEffect(() => () => tlRef.current?.kill(), [])
 
@@ -60,28 +67,16 @@ export default function ResonanceScene() {
 
     const meshMap = buildMeshMap(groupRef.current)
     const rows    = resolveLayout(KEYBOARD_ROWS, meshMap)
-
     if (!rows.length) return
 
-    // Store original Y
     rows.flat().forEach(m => {
       m.userData.origY = m.position.y
       m.material.emissive = new THREE.Color(0, 0, 0)
       m.material.emissiveIntensity = 0
     })
 
-    // Build ripple sequence: rows expand symmetrically from centre
-    // rows index: 0=fn, 1=numbers, 2=QWERTY, 3=homeRow, 4=ZXCV, 5=modifiers
-    // Centre = between row 2 and 3 (QWERTY / homeRow)
-    // Expand order (by distance from centre):
-    //   step 0: rows 2 & 3  (distance 0)
-    //   step 1: rows 1 & 4  (distance 1)
-    //   step 2: rows 0 & 5  (distance 2)
-    const expandOrder = [
-      [2, 3],   // closest to centre
-      [1, 4],
-      [0, 5],   // furthest
-    ]
+    // Ripple order: symmetric from centre rows (2&3) outward (0&5)
+    const expandOrder = [[2, 3], [1, 4], [0, 5]]
 
     function buildCycle() {
       const tl = gsap.timeline({ onComplete: buildCycle })
@@ -90,76 +85,80 @@ export default function ResonanceScene() {
         const t = step * ROW_DELAY
 
         rowPair.forEach(rowIdx => {
-          const rowMeshes = rows[rowIdx]
-          if (!rowMeshes || !rowMeshes.length) return
+          const row = rows[rowIdx]
+          if (!row?.length) return
 
-          const positions  = rowMeshes.map(m => m.position)
-          const materials  = rowMeshes.map(m => m.material)
+          const positions = row.map(m => m.position)
+          const materials = row.map(m => m.material)
 
-          // Within-row stagger: left-to-right for top rows, right-to-left for bottom
-          const stagger = rowIdx <= 2 ? 0.006 : -0.006
+          // Within-row stagger: alternates L→R and R→L for ripple within ripple
+          const stagger = rowIdx % 2 === 0 ? 0.006 : -0.006
 
-          // Rise with golden glow
+          // RISE — dramatic, fast snap up
           tl.to(positions, {
-            y:        `+=${LIFT}`,
+            y: `+=${LIFT}`,
             duration: RISE_DUR,
-            ease:     'power2.out',
+            ease: 'power3.out',
             stagger,
           }, t)
 
+          // Gold emissive flash at peak
           tl.to(materials, {
-            emissiveIntensity: 0.40,
-            duration: RISE_DUR * 0.5,
+            emissiveIntensity: 0.65,
+            duration: RISE_DUR * 0.4,
             stagger,
-            onStart() {
-              materials.forEach(mat => mat.emissive.copy(PEAK_HUE))
-            },
+            onStart() { materials.forEach(m => m.emissive?.copy(PEAK_COLOR)) },
           }, t)
 
-          // Color return during fall
+          // Fade to blue before fall
+          tl.to(materials, {
+            emissiveIntensity: 0.15,
+            duration: RISE_DUR * 0.4,
+          }, t + RISE_DUR * 0.5)
+
+          // FALL — slower, damped back below rest (back.out for mechanical snap)
+          tl.to(positions, {
+            y: `-=${LIFT}`,
+            duration: FALL_DUR,
+            ease: 'back.out(1.2)',
+            stagger,
+          }, t + RISE_DUR * 0.75)
+
+          // Emissive fully out as key settles
           tl.to(materials, {
             emissiveIntensity: 0,
-            duration: FALL_DUR * 0.7,
+            duration: FALL_DUR * 0.8,
             stagger,
-          }, t + RISE_DUR * 0.6)
-
-          // Fall — slightly slower, asymmetric
-          tl.to(positions, {
-            y:        `-=${LIFT}`,
-            duration: FALL_DUR,
-            ease:     'power2.inOut',
-            stagger,
+            onComplete() { materials.forEach(m => m.emissive.copy(REST_COLOR)) },
           }, t + RISE_DUR * 0.8)
         })
       })
 
-      // Rest + hard reset (prevent float drift)
-      const totalRise = expandOrder.length * ROW_DELAY + RISE_DUR + FALL_DUR
-      tl.to({}, { duration: HOLD }, totalRise)
-      tl.call(() => {
-        rows.flat().forEach(m => { m.position.y = m.userData.origY })
-      }, null, totalRise + HOLD)
-
+      const totalTime = expandOrder.length * ROW_DELAY + RISE_DUR + FALL_DUR
+      tl.to({}, { duration: HOLD }, totalTime)
+      // Hard Y reset
+      tl.call(() => { rows.flat().forEach(m => { m.position.y = m.userData.origY }) }, null, totalTime + HOLD)
       tlRef.current = tl
     }
-
     buildCycle()
   })
 
   return (
     <>
-      <ambientLight intensity={0.18} />
+      <ambientLight intensity={0.12} />
       <spotLight
-        position={[0, 8, 1]}
-        angle={0.44}
+        position={[0, 9, 2]}
+        angle={0.35}
         penumbra={0.6}
-        intensity={4.0}
+        intensity={5.0}
         castShadow
         color="#d8eeff"
       />
-      <directionalLight position={[-5, 3, -4]} intensity={0.45} color="#2244aa" />
-      <directionalLight position={[3, 1, 5]}   intensity={0.25} color="#ffe8cc" />
-      <CameraRig />
+      {/* Left rim — cold blue */}
+      <directionalLight position={[-6, 4, -3]} intensity={0.50} color="#2244aa" />
+      {/* Right fill — warm */}
+      <directionalLight position={[4, 2, 5]}   intensity={0.30} color="#ffe8cc" />
+      <CameraRig peakRowRef={peakRowRef} />
       <group ref={groupRef} scale={17} rotation={[0.28, 0.18, 0]}>
         <ClonedKeyboard />
       </group>

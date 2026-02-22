@@ -19,12 +19,12 @@ import gsap                   from 'gsap'
 import ClonedKeyboard         from './ClonedKeyboard'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-const DROP_HEIGHT  = 0.70    // local units above rest (×17 ≈ 11.9 world)
-const FALL_DUR     = 0.60    // fall + bounce duration
-const COL_STAGGER  = 0.070   // seconds between columns (L→R)
-const ROW_STAGGER  = 0.012   // seconds within column (front→back)
-const SPIN_REVS    = 2.5     // Y rotations during fall (720° + 180°)
-const SCAN_DUR     = 2.0     // gold scan duration
+const DROP_HEIGHT  = 1.20    // local units (×17 ≈ 20.4 world — dramatic fall from HIGH above)
+const FALL_DUR     = 0.80    // seconds per key fall — long enough to see spin
+const COL_STAGGER  = 0.110   // 16 cols × 0.110 = 1.76s spread — viewer can track each column
+const ROW_STAGGER  = 0.018   // seconds within column
+const SPIN_REVS    = 3.0     // 1080° — clearly visible rotation
+const SCAN_DUR     = 2.2     // gold scan duration
 
 function CameraRig({ assemblyDoneRef, assemblyDuration }) {
   const elapsed = useRef(0)
@@ -118,9 +118,9 @@ export default function GenesisScene() {
           ease: 'power2.out',   // spin decelerates faster than bounce
         }, t)
 
-        // Teal FLASH on landing
-        tl.to(mesh.material, { emissiveIntensity: 0.65, duration: 0.05 }, t + FALL_DUR * 0.88)
-        tl.to(mesh.material, { emissiveIntensity: 0,    duration: 0.75 }, t + FALL_DUR * 0.93)
+        // Teal FLASH on landing — brighter pop
+        tl.to(mesh.material, { emissiveIntensity: 0.85, duration: 0.04 }, t + FALL_DUR * 0.88)
+        tl.to(mesh.material, { emissiveIntensity: 0,    duration: 0.90 }, t + FALL_DUR * 0.92)
       })
     })
 

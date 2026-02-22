@@ -95,32 +95,32 @@ export default function ShatterScene() {
       // PHASE 1: Explosion — all at once
       tl.call(() => {
         phaseRef.current = 'explode'
-        flashState.intensity = 10.0
+        flashState.intensity = 18.0   // blinding burst
         shakeRef.current = {
-          x: (Math.random() - 0.5) * 1.0,
-          y: (Math.random() - 0.5) * 0.5,
-          z: 0.8,
+          x: (Math.random() - 0.5) * 2.0,
+          y: (Math.random() - 0.5) * 1.0,
+          z: 1.8,
         }
       }, null, 0)
 
       keycaps.forEach((mesh) => {
         const angle = Math.random() * Math.PI * 2
-        const elev  = (Math.random() - 0.30) * Math.PI * 0.6
-        const dist  = 0.25 + Math.random() * 0.30
+        const elev  = (Math.random() - 0.25) * Math.PI * 0.7
+        const dist  = 0.45 + Math.random() * 0.40   // 0.45-0.85 local = 7.6-14.5 world
         const ox    = mesh.userData.origPos
         tl.to(mesh.position, {
           x: ox.x + Math.cos(angle) * Math.cos(elev) * dist,
-          y: ox.y + Math.sin(elev)  * dist + 0.08,
+          y: ox.y + Math.sin(elev)  * dist + 0.12,
           z: ox.z + Math.sin(angle) * Math.cos(elev) * dist,
-          duration: 1.6, ease: 'power3.out',
+          duration: 1.8, ease: 'power3.out',
         }, 0)
         tl.to(mesh.rotation, {
-          x: mesh.userData.origRot.x + (Math.random() - 0.5) * Math.PI * 2.5,
-          y: mesh.userData.origRot.y + (Math.random() - 0.5) * Math.PI * 3.5,
-          z: mesh.userData.origRot.z + (Math.random() - 0.5) * Math.PI * 1.5,
-          duration: 1.6, ease: 'power2.out',
+          x: mesh.userData.origRot.x + (Math.random() - 0.5) * Math.PI * 3.5,
+          y: mesh.userData.origRot.y + (Math.random() - 0.5) * Math.PI * 5.0,
+          z: mesh.userData.origRot.z + (Math.random() - 0.5) * Math.PI * 2.5,
+          duration: 1.8, ease: 'power2.out',
         }, 0)
-        tl.to(mesh.material, { emissiveIntensity: 0.25, duration: 0.4 }, 0.15)
+        tl.to(mesh.material, { emissiveIntensity: 0.30, duration: 0.4 }, 0.15)
       })
 
       // PHASE 2: Camera rush-in before keys snap back

@@ -17,9 +17,9 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 
-const STAGGER    = 0.018
-const DROP_HEIGHT = 0.60
-const CYCLE_DURATION = 87 * 0.018 + 0.70 + 3.0 + 87 * (0.018 * 0.3) + 1.5
+const STAGGER    = 0.022     // more spread out = each key trackable
+const DROP_HEIGHT = 0.80     // local (×17 = 13.6 world — taller fall)
+const CYCLE_DURATION = 87 * 0.022 + 0.70 + 4.5 + 87 * (0.022 * 0.4) + 1.5
 
 function CameraRig() {
   useFrame(({ camera, clock }) => {
@@ -109,7 +109,7 @@ export default function GravityDropScene() {
         tl.to(mesh.material, { emissiveIntensity: 0,    duration: 0.65 }, t + 0.68)
       })
 
-      tl.to({}, { duration: 3.0 })
+      tl.to({}, { duration: 4.5 })   // hold assembled — 4.5s to appreciate the board
 
       // Fade out / float back up for reset
       const fallEnd = shuffled.length * STAGGER + 0.6
