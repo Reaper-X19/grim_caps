@@ -166,7 +166,7 @@ export default function ShatterScene() {
       <pointLight position={[ 5, 2, -2]} intensity={0.7} color="#ff3366" />
       <FlashLight />
       <CameraRig phaseRef={phaseRef} shakeRef={shakeRef} />
-      <group ref={groupRef} scale={17} rotation={[0.28, 0.20, 0]}>
+      <group ref={groupRef} scale={17} rotation={[0.40, 0, 0]}>
         <ClonedKeyboard />
       </group>
     </>

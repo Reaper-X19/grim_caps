@@ -221,7 +221,7 @@ export default function GenesisScene() {
       />
       <directionalLight position={[4, 2, 4]} intensity={0.3} color="#fff5e0" />
       <CameraRig phaseRef={phaseRef} />
-      <group ref={groupRef} scale={17} rotation={[0.28, 0.18, 0]}>
+      <group ref={groupRef} scale={17} rotation={[0.40, 0, 0]}>
         <ClonedKeyboard />
       </group>
     </>

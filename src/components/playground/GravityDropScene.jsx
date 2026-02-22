@@ -141,7 +141,7 @@ export default function GravityDropScene() {
       {/* Cool blue from left — cold sky feel */}
       <directionalLight position={[-4, 4, 2]} intensity={0.35} color="#4488ff" />
       <CameraRig />
-      <group ref={groupRef} scale={17} rotation={[0.28, 0.18, 0]}>
+      <group ref={groupRef} scale={17} rotation={[0.40, 0, 0]}>
         <ClonedKeyboard />
       </group>
     </>

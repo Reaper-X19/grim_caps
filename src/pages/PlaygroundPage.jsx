@@ -277,53 +277,6 @@ export default function PlaygroundPage() {
         </button>
       ))}
 
-      {/* ── Scene switcher strip (top) ───────────────────────────── */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0,
-        zIndex: 20,
-        // Scrim from top
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)',
-        padding: '16px 20px 28px',
-        display: 'flex', gap: 8, overflowX: 'auto',
-        scrollbarWidth: 'none',
-      }}>
-        {ANIMATIONS.map((a, i) => {
-          const isActive = i === idx
-          return (
-            <button
-              key={a.id}
-              onClick={() => goTo(i)}
-              style={{
-                flexShrink: 0,
-                padding: '8px 16px',
-                borderRadius: 10,
-                border: `1px solid ${isActive ? a.accent + '80' : 'rgba(255,255,255,0.08)'}`,
-                background: isActive ? `${a.accent}18` : 'rgba(0,0,0,0.30)',
-                display: 'flex', flexDirection: 'column', gap: 2,
-                cursor: 'pointer', textAlign: 'left',
-                transition: 'all 0.25s ease',
-                boxShadow: isActive ? `0 0 20px ${a.accent}28` : 'none',
-                backdropFilter: 'blur(10px)',
-              }}
-            >
-              <span style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: isActive ? a.accent : 'rgba(255,255,255,0.30)',
-              }}>
-                {a.num}
-              </span>
-              <span style={{
-                fontSize: 13, fontWeight: 700,
-                color: isActive ? '#fff' : 'rgba(255,255,255,0.50)',
-              }}>
-                {a.name}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
       {/* ── Keyboard hint ────────────────────────────────────────── */}
       <div style={{
         position: 'absolute', bottom: 20, right: 24,

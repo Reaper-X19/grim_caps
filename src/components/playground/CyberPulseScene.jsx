@@ -162,7 +162,7 @@ export default function CyberPulseScene() {
       <directionalLight position={[3, 3, 4]}   intensity={0.18} color="#ffffff" />
       <WaveSpot spotRef={spotRef} />
       <CameraRig progressRef={progressRef} />
-      <group ref={groupRef} scale={17} rotation={[0.28, 0.18, 0]}>
+      <group ref={groupRef} scale={17} rotation={[0.40, 0, 0]}>
         <ClonedKeyboard />
       </group>
     </>

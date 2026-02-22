@@ -160,7 +160,7 @@ export default function ResonanceScene() {
       {/* Right fill — warm */}
       <directionalLight position={[4, 2, 5]}   intensity={0.30} color="#ffe8cc" />
       <CameraRig peakRowRef={peakRowRef} />
-      <group ref={groupRef} scale={17} rotation={[0.28, 0.18, 0]}>
+      <group ref={groupRef} scale={17} rotation={[0.40, 0, 0]}>
         <ClonedKeyboard />
       </group>
     </>
