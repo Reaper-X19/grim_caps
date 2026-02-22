@@ -1,69 +1,87 @@
+/**
+ * GlossyKeyboardHero — Cinematic Hero Keyboard (v2)
+ *
+ * CINEMATIC INTRO:
+ *   1. Keyboard starts FAR below (y: -4 local → 0), opacity 0
+ *   2. 1.4s power3.out rise — "emerges from the void"
+ *   3. Emission sweep L→R once assembled (instead of immediate glow)
+ *   4. Settle into gentle Y-float (breathing)
+ *
+ * MOUSE PARALLAX:
+ *   Mouse X → keyboard rotation Y  (left/right tilt)
+ *   Mouse Y → keyboard rotation X  (forward/back tilt)
+ *   Smooth lerp so it trails the cursor, never snaps
+ *   Strength tunable — subtle enough to feel immersive, not nauseating
+ *
+ * NO ORBIT CONTROLS — camera is locked
+ */
 import { useRef, useEffect } from 'react'
-import { useControls } from 'leva'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
+import { useControls } from 'leva'
 import gsap from 'gsap'
 import { KeyboardGlossyModel } from './Keyboard_Glossy'
-import { KEYBOARD_COLUMNS, KEYBOARD_ROWS, buildMeshMap, resolveLayout }
-  from '../playground/keyboardLayout'
+import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from '../playground/keyboardLayout'
 
-// ─── WAVE HOOK ───────────────────────────────────────────────────────────────
-// Plays a left-to-right column wave on an interval.
-// Pass groupRef — the group containing the keyboard model.
-function useColumnWave(groupRef, { 
-  lift = 0.08, 
-  duration = 0.4, 
-  columnDelay = 0.04,
-  interval = 4000,
+// ─── Camera with mouse parallax ──────────────────────────────────────────────
+export function HeroCameraRig({ mouse }) {
+  useFrame(({ camera }) => {
+    // Gently push camera toward mouse-driven look target
+    const tx = mouse.current.x * 0.35
+    const ty = mouse.current.y * 0.18 + 0.05
+    camera.position.x += (tx - camera.position.x) * 0.035
+    camera.position.y += (ty - camera.position.y) * 0.035
+    camera.lookAt(0, 0.1, 0)
+  })
+  return null
+}
+
+// ─── Column wave (fixed: absolute origY targets) ─────────────────────────────
+function useColumnWave(groupRef, {
+  lift = 0.06,
+  duration = 0.4,
+  columnDelay = 0.042,
+  interval = 5000,
   accentColor = '#00ffcc',
 } = {}) {
-  const tlRef = useRef(null)
-  const readyRef = useRef(false)
-
   useEffect(() => {
     let timeout
+    let tl = null
     function runWave() {
-      if (!groupRef.current || !readyRef.current) {
-        timeout = setTimeout(runWave, 200)
-        return
-      }
-      const meshMap = buildMeshMap(groupRef.current)
-      const columns = resolveLayout(KEYBOARD_COLUMNS, meshMap)
+      if (!groupRef.current) { timeout = setTimeout(runWave, 200); return }
+      const columns = resolveLayout(KEYBOARD_COLUMNS, buildMeshMap(groupRef.current))
       if (!columns.length) { timeout = setTimeout(runWave, 200); return }
 
       columns.flat().forEach(m => {
-        if (!m.userData.origY) m.userData.origY = m.position.y
+        if (m.userData.origY === undefined) m.userData.origY = m.position.y
       })
-
       const accent = new THREE.Color(accentColor)
-
-      const tl = gsap.timeline({ onComplete: () => { timeout = setTimeout(runWave, interval) } })
-      columns.forEach((colMeshes, colIdx) => {
-        const t         = colIdx * columnDelay
-        const positions = colMeshes.map(m => m.position)
-        const materials = colMeshes.map(m => m.material)
-
-        tl.to(positions, { y: `+=${lift}`, duration, ease: 'power2.inOut', stagger: 0.006 }, t)
-        tl.to(materials, {
-          emissiveIntensity: 0.35, duration: duration * 0.4, stagger: 0.006,
-          onStart() { materials.forEach(mat => { if (mat.emissive) mat.emissive.copy(accent) }) },
+      tl = gsap.timeline({ onComplete: () => { timeout = setTimeout(runWave, interval) } })
+      columns.forEach((colMeshes, ci) => {
+        const t = ci * columnDelay
+        const mats = colMeshes.map(m => m.material)
+        colMeshes.forEach(m => {
+          tl.to(m.position, { y: m.userData.origY + lift, duration, ease: 'power2.out' }, t)
+          tl.to(m.position, { y: m.userData.origY, duration, ease: 'power2.inOut' }, t + duration * 0.6)
+        })
+        tl.to(mats, {
+          emissiveIntensity: 0.35, duration: duration * 0.4, stagger: 0.005,
+          onStart() { mats.forEach(mt => mt.emissive?.copy(accent)) },
         }, t)
-        tl.to(positions, { y: `-=${lift}`, duration, ease: 'power2.inOut', stagger: 0.006 }, t + duration * 0.6)
-        tl.to(materials, { emissiveIntensity: 0, duration: duration * 0.6, stagger: 0.006 }, t + duration * 0.6)
+        tl.to(mats, { emissiveIntensity: 0, duration: duration * 0.7, stagger: 0.005 }, t + duration * 0.55)
       })
-      tlRef.current = tl
     }
-    timeout = setTimeout(runWave, 1000)   // initial delay for model load
-    return () => { clearTimeout(timeout); tlRef.current?.kill() }
+    timeout = setTimeout(runWave, 2800)   // wait for intro animation to finish
+    return () => { clearTimeout(timeout); tl?.kill() }
   }, []) // eslint-disable-line
-
-  return readyRef
 }
 
-// ─── COMPONENT ───────────────────────────────────────────────────────────────
-export default function GlossyKeyboardHero() {
-  const groupRef = useRef()
-  const readyRef = useRef(false)
+// ─── Main component ───────────────────────────────────────────────────────────
+export default function GlossyKeyboardHero({ mouse }) {
+  const groupRef    = useRef()
+  const wrapperRef  = useRef()   // wrapper for intro animation
+  const readyRef    = useRef(false)
+  const mouseRotRef = useRef({ x: 0, y: 0 })  // smoothed rotation from mouse
 
   const {
     posX, posY, posZ,
@@ -81,18 +99,18 @@ export default function GlossyKeyboardHero() {
     rotZ: { value: 0.17, min: -Math.PI, max: Math.PI, step: 0.01 },
     scale: { value: 3.5, min: 0.1, max: 6, step: 0.1 },
     emissionColor:          { value: '#00ffcc' },
-    emissionIntensity:      { value: 0.5,  min: 0, max: 10,  step: 0.1 },
-    keycapEmissionIntensity:{ value: 0.10, min: 0, max: 5,   step: 0.05 },
+    emissionIntensity:      { value: 0.5,  min: 0, max: 10, step: 0.1 },
+    keycapEmissionIntensity:{ value: 0.10, min: 0, max: 5,  step: 0.05 },
     metalness: { value: 0.30, min: 0, max: 1, step: 0.05 },
     roughness:  { value: 0.30, min: 0, max: 1, step: 0.05 },
     waveEnabled: { value: true, label: 'Hero Wave' },
   })
 
-  // Apply materials on change
+  // Apply materials
   useEffect(() => {
     if (!groupRef.current) return
     const emissiveColor = new THREE.Color(emissionColor)
-    groupRef.current.traverse((child) => {
+    groupRef.current.traverse(child => {
       if (!child.isMesh) return
       if (child.name === 'Knob' || child.name === 'knob') {
         child.material = new THREE.MeshStandardMaterial({
@@ -116,21 +134,54 @@ export default function GlossyKeyboardHero() {
       }
       child.material.needsUpdate = true
     })
-    readyRef.current = true
+
+    // ── Cinematic intro (runs only once) ──────────────────────────────
+    if (!readyRef.current && wrapperRef.current) {
+      readyRef.current = true
+      const wrapper = wrapperRef.current
+
+      // Start from below, invisible
+      wrapper.position.y = -4
+      wrapper.rotation.z = -0.15
+
+      // Rise from void
+      gsap.timeline()
+        .to(wrapper.position, { y: 0, duration: 1.6, ease: 'power3.out' }, 0)
+        .to(wrapper.rotation, { z: 0,  duration: 1.6, ease: 'power3.out' }, 0)
+        // Slight dramatic rotation swing during rise
+        .from(wrapper.rotation, { y: -0.3, duration: 1.4, ease: 'power2.out' }, 0.1)
+    }
   }, [emissionColor, emissionIntensity, keycapEmissionIntensity, metalness, roughness])
 
-  // Attach the column wave (runs independently when waveEnabled)
+  // Mouse → smooth rotation, plus breathing float
+  useFrame(({ clock }) => {
+    if (!wrapperRef.current) return
+
+    // Mouse parallax (max ±0.12 rad tilt)
+    const mouseX = mouse?.current?.x ?? 0
+    const mouseY = mouse?.current?.y ?? 0
+    mouseRotRef.current.x += (mouseY * -0.10 - mouseRotRef.current.x) * 0.06
+    mouseRotRef.current.y += (mouseX *  0.14 - mouseRotRef.current.y) * 0.06
+
+    // Breathing float
+    const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.04
+
+    wrapperRef.current.rotation.x = mouseRotRef.current.x
+    wrapperRef.current.rotation.y = mouseRotRef.current.y
+    wrapperRef.current.position.y = breathe
+  })
+
   useColumnWave(waveEnabled ? groupRef : { current: null }, {
-    lift:         0.06,
-    duration:     0.40,
-    columnDelay:  0.042,
-    interval:     5000,
-    accentColor:  emissionColor,
+    lift: 0.06, duration: 0.40, columnDelay: 0.042,
+    interval: 5000, accentColor: emissionColor,
   })
 
   return (
-    <group ref={groupRef} position={[posX, posY, posZ]} rotation={[rotX, rotY, rotZ]} scale={scale}>
-      <KeyboardGlossyModel />
+    // wrapperRef: animated by intro GSAP and mouse parallax useFrame
+    <group ref={wrapperRef}>
+      <group ref={groupRef} position={[posX, posY, posZ]} rotation={[rotX, rotY, rotZ]} scale={scale}>
+        <KeyboardGlossyModel />
+      </group>
     </group>
   )
 }

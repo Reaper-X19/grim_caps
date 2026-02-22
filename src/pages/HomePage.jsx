@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
@@ -6,9 +6,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Canvas } from '@react-three/fiber'
 import { PerspectiveCamera, Environment } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
-import { useControls } from 'leva'
 import * as THREE from 'three'
-import GlossyKeyboardHero from '../components/3d/GlossyKeyboardHero'
+import GlossyKeyboardHero, { HeroCameraRig } from '../components/3d/GlossyKeyboardHero'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -17,14 +16,15 @@ export default function HomePage() {
   const featuresRef = useRef(null)
   const ctaRef = useRef(null)
   
-  // Bloom controls
-  const { bloomIntensity, bloomThreshold, bloomSmoothing } = useControls('Bloom Effect', {
-    bloomIntensity: { value: 1.5, min: 0, max: 3, step: 0.1 },
-    bloomThreshold: { value: 0.9, min: 0, max: 1, step: 0.05 },
-    bloomSmoothing: { value: 0.9, min: 0, max: 1, step: 0.05 }
-  })
+  const mouseRef = useRef({ x: 0, y: 0 })
 
-  // Add your custom animations here using useGSAP or useEffect
+  const handleMouseMove = useCallback((e) => {
+    // Normalize to -1..+1
+    mouseRef.current = {
+      x: (e.clientX / window.innerWidth  - 0.5) * 2,
+      y: (e.clientY / window.innerHeight - 0.5) * 2,
+    }
+  }, [])
 
 
   return (
@@ -70,7 +70,10 @@ export default function HomePage() {
         </div>
 
         {/* Full Screen 3D Canvas with Glossy Keyboard */}
-        <div className="absolute inset-0 w-full h-full">
+        <div
+          className="absolute inset-0 w-full h-full"
+          onMouseMove={handleMouseMove}
+        >
           <Canvas
             className="w-full h-full"
             gl={{ 
@@ -82,6 +85,8 @@ export default function HomePage() {
             dpr={[1, 2]}
           >
             <PerspectiveCamera makeDefault position={[0, 0, 4]} fov={45} />
+            {/* Camera drifts toward mouse — no OrbitControls */}
+            <HeroCameraRig mouse={mouseRef} />
             
             {/* HDR Environment - REDUCED for spooky atmosphere */}
             <Environment 
@@ -115,16 +120,11 @@ export default function HomePage() {
             <directionalLight position={[0, 0, -10]} intensity={0.2} color="#00ffcc" />
             <directionalLight position={[0, 0, 10]} intensity={0.2} color="#ffffff" />
             
-            {/* Glossy Keyboard with Emissions */}
-            <GlossyKeyboardHero />
+            {/* Glossy Keyboard — receives mouse for parallax */}
+            <GlossyKeyboardHero mouse={mouseRef} />
             
-            {/* Post-Processing: Bloom for glowing emissions */}
             <EffectComposer>
-              <Bloom
-                intensity={bloomIntensity}
-                luminanceThreshold={bloomThreshold}
-                luminanceSmoothing={bloomSmoothing}
-              />
+              <Bloom intensity={1.5} luminanceThreshold={0.9} luminanceSmoothing={0.9} />
             </EffectComposer>
           </Canvas>
         </div>
