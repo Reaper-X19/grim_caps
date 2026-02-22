@@ -117,14 +117,20 @@ export default function ShatterScene() {
       }, null, 0)
 
       keycaps.forEach((mesh) => {
-        const angle = Math.random() * Math.PI * 2
-        const elev  = (Math.random() - 0.15) * Math.PI * 0.80  // upward bias
-        const dist  = 0.22 + Math.random() * 0.28              // 0.22-0.50 local → 3.7-8.5 world
-        const ox    = mesh.userData.origPos
+        // True 3D uniform scatter — normalized random direction
+        let nx = (Math.random() - 0.5) * 2
+        let ny = (Math.random() - 0.5) * 2 + 0.12  // slight upward bias to clear keyboard body
+        let nz = (Math.random() - 0.5) * 2
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
+        nx /= len; ny /= len; nz /= len
+
+        const dist = 0.22 + Math.random() * 0.28    // 0.22–0.50 local → 3.7–8.5 world
+        const ox   = mesh.userData.origPos
+
         tl.to(mesh.position, {
-          x: ox.x + Math.cos(angle) * Math.cos(elev) * dist,
-          y: ox.y + Math.sin(elev)  * dist + 0.18,
-          z: ox.z + Math.sin(angle) * Math.cos(elev) * dist,
+          x: ox.x + nx * dist,
+          y: ox.y + ny * dist,
+          z: ox.z + nz * dist,
           duration: 1.6, ease: 'power3.out',
         }, 0)
         tl.to(mesh.rotation, {
