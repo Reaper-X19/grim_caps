@@ -31,9 +31,10 @@ const SPREAD = 0.055   // local per gap (×17 = 0.935 world)
 const LAYER_DEFS = [
   { id: 'keycaps',  delta: +SPREAD * 3,   color: '#c8d8ff', matchMesh:  n => n.startsWith('K_') || n === 'Knob' || n === 'Screen' },
   { id: 'switches', delta: +SPREAD * 2,   color: '#cc44ff', matchGroup: 'Switches_Positions' },
-  { id: 'plate',    delta: +SPREAD * 1,   color: '#8899cc', matchMesh:  n => n === 'Plate' },
+  // PCB now sits above Plate (user requested swap)
+  { id: 'pcb',      delta: +SPREAD * 1,   color: '#22dd88', matchMesh:  n => n === 'PCB' },
   { id: 'emission', delta: +SPREAD * 0.3, color: '#00ffcc', matchMesh:  n => n.toLowerCase().includes('emission') },
-  { id: 'pcb',      delta: -SPREAD * 1,   color: '#22dd88', matchMesh:  n => n === 'PCB' },
+  { id: 'plate',    delta: -SPREAD * 1,   color: '#8899cc', matchMesh:  n => n === 'Plate' },
   { id: 'case',     delta: -SPREAD * 2,   color: '#a0b8cc', matchMesh:  n => n === 'Top_Case' },
   { id: 'weight',   delta: -SPREAD * 3,   color: '#b87333', matchMesh:  n => n === 'Weight' },
 ]
@@ -59,14 +60,26 @@ const STEP_DELAY   = 0.38
 const COL_DELAY    = 0.032   // seconds between keycap columns (L→R wave)
 
 function CameraRig({ phaseRef }) {
-  useFrame(({ camera }) => {
+  const elapsed = useRef(0)
+  useFrame(({ camera }, delta) => {
+    elapsed.current += delta
+    const t = elapsed.current
     const exploded = phaseRef.current === 'explode' || phaseRef.current === 'exploded'
-    // Pull back and look at keyboard centre — slightly higher when exploded
-    const tx = 0.2,  ty = exploded ? 3.0 : 1.8,  tz = exploded ? 10.0 : 5.5
-    const lookY = exploded ? 0.5 : 0.2
-    camera.position.x += (tx - camera.position.x) * 0.03
-    camera.position.y += (ty - camera.position.y) * 0.03
-    camera.position.z += (tz - camera.position.z) * 0.03
+
+    let tx, ty, tz, lookY
+    if (exploded) {
+      // Slow left-right crane during exploded hold — magazine teardown shot
+      const drift = Math.sin(t * 0.09) * 1.0
+      tx = drift; ty = 3.2; tz = 10.5; lookY = 0.6
+    } else {
+      // Smooth orbit around assembled keyboard
+      tx = Math.sin(t * 0.18) * 1.5
+      tz = 5.5 + Math.cos(t * 0.18) * 0.6
+      ty = 1.8; lookY = 0.2
+    }
+    camera.position.x += (tx - camera.position.x) * 0.025
+    camera.position.y += (ty - camera.position.y) * 0.025
+    camera.position.z += (tz - camera.position.z) * 0.025
     camera.lookAt(0, lookY, 0)
   })
   return null
@@ -74,21 +87,19 @@ function CameraRig({ phaseRef }) {
 
 export default function LiquidChromeScene() {
   const groupRef     = useRef()
-  const rotRef       = useRef()
+  const floatRef     = useRef(null)   // gentle breathe float on assembled model
   const collectedRef = useRef(false)
   const tlRef        = useRef(null)
   const phaseRef     = useRef('hold')
-  const rotSpeedRef  = useRef(0.08)
 
   useEffect(() => () => tlRef.current?.kill(), [])
 
-  // Rotation slows to stop during exploded hold (clean layer view)
-  useFrame((_, delta) => {
-    if (rotRef.current) {
-      const target = (phaseRef.current === 'exploded') ? 0 : 0.08
-      rotSpeedRef.current += (target - rotSpeedRef.current) * 0.04
-      rotRef.current.rotation.y += delta * rotSpeedRef.current
-    }
+  // Floating breathe — only during assembled hold
+  useFrame(({ clock }) => {
+    if (!floatRef.current) return
+    const phase = phaseRef.current
+    const targetY = (phase === 'hold') ? Math.sin(clock.elapsedTime * 0.70) * 0.10 : 0
+    floatRef.current.position.y += (targetY - floatRef.current.position.y) * 0.04
   })
 
   useFrame(() => {
@@ -279,8 +290,9 @@ export default function LiquidChromeScene() {
       <pointLight position={[-8,  0, 3]} intensity={0.9} color="#8899cc" />
       <pointLight position={[ 8,  1, 3]} intensity={0.9} color="#cc44ff" />
       <CameraRig phaseRef={phaseRef} />
-      <group ref={rotRef} position={[0, -0.3, 0]}>
-        <group ref={groupRef} scale={17} rotation={[0.30, 0.10, 0]}>
+      {/* floatRef gives the breathing float on assembled keyboard */}
+      <group ref={floatRef} position={[0, -0.3, 0]}>
+        <group ref={groupRef} scale={17}>
           <ClonedKeyboard />
         </group>
       </group>
