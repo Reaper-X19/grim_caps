@@ -25,31 +25,33 @@ import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 const SPREAD = 0.055
 
 const LAYER_DEFS = [
-  { id: 'keycaps',  delta: +SPREAD * 3,   color: '#c8d8ff', matchMesh:  n => n.startsWith('K_') || n === 'Knob' || n === 'Screen' },
-  { id: 'switches', delta: +SPREAD * 2,   color: '#cc44ff', matchGroup: 'Switches_Positions' },
-  { id: 'pcb',      delta: +SPREAD * 1,   color: '#22dd88', matchMesh:  n => n === 'PCB' },
-  // emission (white glow strips) — 4th from bottom, barely above centre
-  { id: 'emission', delta: +SPREAD * 0.3, color: '#aaddff', matchMesh:  n => n.toLowerCase().includes('emission') },
-  // Plate = the GOLD/BRASS mounting plate — 3rd from bottom (USER FIX ✓)
-  { id: 'plate',    delta: -SPREAD * 1,   color: '#c8a84b', matchMesh:  n => n === 'Plate' },
-  { id: 'case',     delta: -SPREAD * 2,   color: '#a0b8cc', matchMesh:  n => n === 'Top_Case' },
-  { id: 'weight',   delta: -SPREAD * 3,   color: '#b87333', matchMesh:  n => n === 'Weight' },
+  { id: 'keycaps',      delta: +SPREAD * 3,   color: '#c8d8ff', matchMesh:  n => n.startsWith('K_') || n === 'Knob' || n === 'Screen' },
+  { id: 'switches',    delta: +SPREAD * 2,   color: '#cc44ff', matchGroup: 'Switches_Positions' },
+  { id: 'pcb',         delta: +SPREAD * 1,   color: '#22dd88', matchMesh:  n => n === 'PCB' },
+  { id: 'emission',    delta: +SPREAD * 0.3, color: '#aaddff', matchMesh:  n => n.toLowerCase().includes('emission') },
+  { id: 'plate',       delta: -SPREAD * 0.8, color: '#9ab0cc', matchMesh:  n => n === 'Plate' },
+  { id: 'topcase',     delta: -SPREAD * 1.6, color: '#a0b8cc', matchMesh:  n => n === 'Top_Case' },
+  // Bottom Case (gold housing) = Cube005 + Cube005_1 — confirmed from GLTF
+  { id: 'bottomcase',  delta: -SPREAD * 2.3, color: '#c8a84b', matchMesh:  n => n === 'Cube005' || n === 'Cube005_1' },
+  { id: 'weight',      delta: -SPREAD * 3,   color: '#b87333', matchMesh:  n => n === 'Weight' },
 ]
 
 // Explode: outermost first
 const EXPLODE_STEPS = [
-  { ids: ['keycaps', 'weight'],  t: 0.00, dur: 0.70 },
-  { ids: ['switches', 'case'],   t: 0.14, dur: 0.60 },
-  { ids: ['pcb'],                t: 0.26, dur: 0.55 },
-  { ids: ['plate'],              t: 0.34, dur: 0.52 },
-  { ids: ['emission'],           t: 0.42, dur: 0.50 },
+  { ids: ['keycaps', 'weight'],          t: 0.00, dur: 0.70 },
+  { ids: ['switches', 'topcase'],        t: 0.14, dur: 0.60 },
+  { ids: ['bottomcase'],                 t: 0.24, dur: 0.58 },
+  { ids: ['pcb'],                        t: 0.32, dur: 0.55 },
+  { ids: ['plate'],                      t: 0.40, dur: 0.52 },
+  { ids: ['emission'],                   t: 0.47, dur: 0.50 },
 ]
 
 // Reassemble: inner fills first
 const REASSEMBLE_STEPS = [
-  ['pcb', 'emission'],   // green + white strips click in
-  ['plate'],            // brass plate seats
-  ['case'],
+  ['emission', 'pcb'],
+  ['plate'],
+  ['topcase'],
+  ['bottomcase'],   // bottom case last before switches
   ['switches'],
 ]
 const STEP_DELAY = 0.38
@@ -134,15 +136,6 @@ export default function LiquidChromeScene() {
 
     const meshMap = buildMeshMap(groupRef.current)
     const columns = resolveLayout(KEYBOARD_COLUMNS, meshMap)
-
-    // DEBUG: print all structural mesh names once to find Bottom_Case name
-    const structNames = []
-    groupRef.current.traverse(c => {
-      if (c.isMesh && !c.name.startsWith('K_') && !c.name.toLowerCase().includes('emission')
-          && c.name !== 'Knob' && c.name !== 'Screen')
-        structNames.push(c.name)
-    })
-    console.log('[Chrome layers] mesh names:', [...new Set(structNames)])
 
     // ── Helpers ───────────────────────────────────────────────────────────
     function glowObj(tl, obj, color, intensity, startT, dur) {
