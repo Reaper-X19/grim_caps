@@ -1,15 +1,16 @@
 /**
- * Genesis — Born from Darkness  (Column-Based Assembly v3)
+ * Genesis — Born from Darkness  (Void + Rotation Rewrite)
  *
- * Uses KEYBOARD_COLUMNS layout for precise column-by-column key arrival.
- * Keys fall from above within each column, left→right.
- * Within each column, keys arrive with a tiny row stagger (front→back).
+ * Restores the original void/materialize aesthetic:
+ *   • Scene is PITCH BLACK — no ambient, only a narrow overhead spotlight
+ *   • Keys start INVISIBLE (opacity 0), positioned above their rest pos,
+ *     spinning on Y-axis (like coins falling from the void)
+ *   • Column by column they descend, spinning fast then decelerating on impact
+ *   • On landing: teal emissive FLASH, opacity snaps to 1
+ *   • After full assembly: gold scan-line sweeps L→R
  *
- * After full assembly: a golden scan-line emissive sweep travels L→R
- * across all columns using the same column order.
- *
- * Camera: starts very close/tight then pulls back to reveal the full board.
- * After assembly: slow sinusoidal sway — never orbits behind the keyboard.
+ * Camera starts very close (intimate darkness), pulls back slowly to reveal
+ * the complete assembled board, then settles to gentle sway.
  */
 import { useRef, useEffect } from 'react'
 import { useFrame }           from '@react-three/fiber'
@@ -18,31 +19,25 @@ import gsap                   from 'gsap'
 import ClonedKeyboard         from './ClonedKeyboard'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-const DROP_HEIGHT  = 0.65   // local units (×17 ≈ 11 world — fall from high above)
-const FALL_DUR     = 0.55   // seconds per key fall
-const COL_STAGGER  = 0.065  // seconds between columns
-const ROW_STAGGER  = 0.010  // seconds between keys within a column
-const SCAN_DUR     = 1.8    // seconds for scan-line sweep
+const DROP_HEIGHT  = 0.70    // local units above rest (×17 ≈ 11.9 world)
+const FALL_DUR     = 0.60    // fall + bounce duration
+const COL_STAGGER  = 0.070   // seconds between columns (L→R)
+const ROW_STAGGER  = 0.012   // seconds within column (front→back)
+const SPIN_REVS    = 2.5     // Y rotations during fall (720° + 180°)
+const SCAN_DUR     = 2.0     // gold scan duration
 
-// ─── CAMERA ─────────────────────────────────────────────────────────────────
-function CameraRig({ assemblyDoneRef }) {
+function CameraRig({ assemblyDoneRef, assemblyDuration }) {
   const elapsed = useRef(0)
   useFrame(({ camera }, delta) => {
     elapsed.current += delta
-    const done     = assemblyDoneRef.current
-    const pullTime = done ? 0 : 0
-
-    if (!done) {
-      // Pull back reveal during assembly
-      const dur    = 5.0                    // match approximate assembly duration
-      const p      = Math.min(1, elapsed.current / dur)
-      const eased  = 1 - Math.pow(1 - p, 3)
-      camera.position.x = THREE.MathUtils.lerp(1.2, 0.8, eased)
-      camera.position.y = THREE.MathUtils.lerp(1.0, 2.0, eased)
-      camera.position.z = THREE.MathUtils.lerp(3.2, 5.5, eased)
+    if (!assemblyDoneRef.current) {
+      const p     = Math.min(1, elapsed.current / (assemblyDuration + 1.0))
+      const eased = 1 - Math.pow(1 - p, 3)
+      camera.position.x = THREE.MathUtils.lerp(1.0, 0.8, eased)
+      camera.position.y = THREE.MathUtils.lerp(0.8, 2.0, eased)
+      camera.position.z = THREE.MathUtils.lerp(3.0, 5.5, eased)
     } else {
-      // Gentle sway post-assembly — never goes behind the keyboard
-      const sway  = Math.sin(elapsed.current * 0.04) * 0.5
+      const sway  = Math.sin(elapsed.current * 0.04) * 0.4
       camera.position.x += (sway - camera.position.x) * 0.008
       camera.position.y += (2.0  - camera.position.y) * 0.008
       camera.position.z += (5.5  - camera.position.z) * 0.008
@@ -52,12 +47,12 @@ function CameraRig({ assemblyDoneRef }) {
   return null
 }
 
-// ─── MAIN SCENE ─────────────────────────────────────────────────────────────
 export default function GenesisScene() {
   const groupRef        = useRef()
   const collectedRef    = useRef(false)
   const tlRef           = useRef(null)
   const assemblyDoneRef = useRef(false)
+  const assemblyDurRef  = useRef(5.0)
 
   useEffect(() => () => tlRef.current?.kill(), [])
 
@@ -68,20 +63,24 @@ export default function GenesisScene() {
     const meshMap = buildMeshMap(groupRef.current)
     const columns = resolveLayout(KEYBOARD_COLUMNS, meshMap)
 
-    // Also grab non-keycap meshes (case, plate, etc.) for fade-in
+    // Non-keycap structural meshes (case, plate, etc.) — fade in first
     const structs = []
     groupRef.current.traverse((child) => {
-      if (child.isMesh && !child.name.startsWith('K_')) {
+      if (child.isMesh && !child.name.startsWith('K_') &&
+          !child.name.toLowerCase().includes('emission')) {
         child.material.transparent = true
         child.material.opacity     = 0
         structs.push(child)
       }
     })
 
-    // Initialise all keycaps: transparent, above their rest position
-    columns.flat().forEach(mesh => {
-      mesh.userData.origY        = mesh.position.y
-      mesh.position.y            = mesh.userData.origY + DROP_HEIGHT
+    // Initialise keycaps: invisible, above, pre-spun
+    const allKeycaps = columns.flat()
+    allKeycaps.forEach(mesh => {
+      mesh.userData.origY    = mesh.position.y
+      mesh.userData.origRotY = mesh.rotation.y
+      mesh.position.y        = mesh.userData.origY + DROP_HEIGHT
+      mesh.rotation.y        = mesh.userData.origRotY + Math.PI * 2 * SPIN_REVS
       mesh.material.transparent  = true
       mesh.material.opacity      = 0
       mesh.material.emissive     = new THREE.Color('#00ffaa')
@@ -92,45 +91,58 @@ export default function GenesisScene() {
       onComplete: () => { assemblyDoneRef.current = true }
     })
 
-    // Phase 0 — case silhouette fades in first
+    // Phase 0: Case silhouette emerges from total darkness (ambient only)
     structs.forEach(m => {
-      tl.to(m.material, { opacity: 0.6, duration: 0.5, ease: 'power2.out' }, 0)
+      tl.to(m.material, { opacity: 0.4, duration: 0.8, ease: 'power1.inOut' }, 0.2)
     })
 
-    // Phase 1 — column-by-column key arrival
+    // Phase 1: Column-by-column key FALL — spinning Y, bounce landing
     let lastKeyTime = 0
     columns.forEach((colMeshes, colIdx) => {
       colMeshes.forEach((mesh, rowIdx) => {
-        const t = colIdx * COL_STAGGER + rowIdx * ROW_STAGGER
+        const t = 0.4 + colIdx * COL_STAGGER + rowIdx * ROW_STAGGER
         lastKeyTime = Math.max(lastKeyTime, t + FALL_DUR)
 
-        // Appear and fall
-        tl.to(mesh.material, { opacity: 1, duration: 0.08 }, t)
-        tl.to(mesh.position, { y: mesh.userData.origY, duration: FALL_DUR, ease: 'bounce.out' }, t)
+        // Snap visible in one frame just before fall
+        tl.to(mesh.material, { opacity: 1, duration: 0.04 }, t)
 
-        // Teal flash on arrival
-        tl.to(mesh.material, { emissiveIntensity: 0.55, duration: 0.06 }, t + FALL_DUR * 0.85)
-        tl.to(mesh.material, { emissiveIntensity: 0,    duration: 0.70 }, t + FALL_DUR * 0.91)
+        // FALL — position and spin together
+        tl.to(mesh.position, {
+          y: mesh.userData.origY,
+          duration: FALL_DUR,
+          ease: 'bounce.out',
+        }, t)
+        tl.to(mesh.rotation, {
+          y: mesh.userData.origRotY,
+          duration: FALL_DUR,
+          ease: 'power2.out',   // spin decelerates faster than bounce
+        }, t)
+
+        // Teal FLASH on landing
+        tl.to(mesh.material, { emissiveIntensity: 0.65, duration: 0.05 }, t + FALL_DUR * 0.88)
+        tl.to(mesh.material, { emissiveIntensity: 0,    duration: 0.75 }, t + FALL_DUR * 0.93)
       })
     })
 
-    // Phase 2 — case fully opaque after all keys land
+    assemblyDurRef.current = lastKeyTime
+
+    // Phase 2: Case fully opaque
     structs.forEach(m => {
-      tl.to(m.material, { opacity: 1, duration: 0.4 }, lastKeyTime)
+      tl.to(m.material, { opacity: 1, duration: 0.5 }, lastKeyTime + 0.2)
     })
 
-    // Phase 3 — Gold scan-line sweep across all columns
-    const scanStart  = lastKeyTime + 0.5
+    // Phase 3: Gold scan-line L→R
     const goldColor  = new THREE.Color('#ffcc44')
+    const scanStart  = lastKeyTime + 0.6
     columns.forEach((colMeshes, colIdx) => {
       const t = scanStart + (colIdx / columns.length) * SCAN_DUR
       colMeshes.forEach(mesh => {
         tl.to(mesh.material, {
           emissiveIntensity: 0.40,
-          duration: 0.10,
+          duration: 0.08,
           onStart() { mesh.material.emissive.copy(goldColor) },
         }, t)
-        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.55 }, t + 0.10)
+        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.60 }, t + 0.08)
       })
     })
 
@@ -139,25 +151,27 @@ export default function GenesisScene() {
 
   return (
     <>
-      <ambientLight intensity={0.06} />
+      {/* Near-total darkness — only tight overhead beam */}
+      <ambientLight intensity={0.04} />
       <spotLight
-        position={[0, 8, 2]}
-        angle={0.30}
-        penumbra={0.65}
-        intensity={5.0}
+        position={[0, 9, 2]}
+        angle={0.26}
+        penumbra={0.70}
+        intensity={6.0}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        color="#e0ecff"
+        color="#d0eaff"
       />
+      {/* Subtle blue rim from behind-left for silhouette */}
       <spotLight
-        position={[-6, 5, -3]}
-        angle={0.45}
-        penumbra={0.9}
-        intensity={1.2}
-        color="#2244ff"
+        position={[-7, 4, -4]}
+        angle={0.50}
+        penumbra={0.95}
+        intensity={1.0}
+        color="#1122ff"
       />
-      <directionalLight position={[4, 2, 4]} intensity={0.4} color="#fff5e0" />
-      <CameraRig assemblyDoneRef={assemblyDoneRef} />
+      <directionalLight position={[4, 2, 4]} intensity={0.3} color="#fff5e0" />
+      <CameraRig assemblyDoneRef={assemblyDoneRef} assemblyDuration={assemblyDurRef.current} />
       <group ref={groupRef} scale={17} rotation={[0.28, 0.18, 0]}>
         <ClonedKeyboard />
       </group>
