@@ -18,7 +18,7 @@ import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 
 const STAGGER    = 0.032     // spread per key
-const DROP_HEIGHT = 0.45     // local (×17 = 7.65 world — full travel but stays in frame)
+const DROP_HEIGHT = 0.32     // local (×17 = 5.4 world — starts within visible scene area)
 const CYCLE_DURATION = 87 * 0.038 + 1.20 + 7.5 + 87 * (0.038 * 0.4) + 2.0
 
 function CameraRig() {

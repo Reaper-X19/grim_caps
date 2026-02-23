@@ -19,7 +19,7 @@ import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 import { KEYBOARD_ROWS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-const LIFT      = 0.12    // local (×17 = 2.04 world — DRAMATIC!)
+const LIFT      = 0.08    // local (×17 = 1.36 world — dramatic but in-frame)
 const RISE_DUR  = 0.65    // was 0.38
 const FALL_DUR  = 1.00    // was 0.60
 const ROW_DELAY = 0.17    // was 0.10

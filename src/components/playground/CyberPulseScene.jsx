@@ -19,7 +19,7 @@ import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-const LIFT         = 0.12    // local Y (×17 = 2.04 world — dramatic heave)
+const LIFT         = 0.055   // local Y (×17 = 0.94 world — visible but stays in frame)
 const LIFT_DUR     = 0.55    // was 0.32
 const FALL_DUR     = 0.85    // was 0.50
 const COLUMN_DELAY = 0.058   // was 0.035
@@ -96,7 +96,7 @@ export default function CyberPulseScene() {
       const accent   = ACCENT_COLORS[colorIdxRef.current % ACCENT_COLORS.length]
       colorIdxRef.current++
 
-      const activeLift = isMega ? LIFT * 2.5 : LIFT
+      const activeLift = isMega ? LIFT * 1.6 : LIFT   // max = 0.055*1.6 = 0.088 local
       const holdTime   = isMega ? 3.5 : HOLD_AFTER
 
       const orderedColumns = goRight ? columns : [...columns].reverse()
