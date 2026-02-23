@@ -292,9 +292,9 @@ export default function KeyboardModel() {
   return (
     <group
       ref={groupRef}
-      scale={12.9}
-      position={[0.23, 1.7, 0.25]}
-      rotation={[-0.1, 0, -0.20]}
+      scale={12}
+      position={[0, 0, 0]}
+      rotation={[-0.3, 0, 0]}
     >
       <KeyboardGLTF />
     </group>
