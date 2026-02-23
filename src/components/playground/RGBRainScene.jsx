@@ -96,41 +96,47 @@ export default function ResonanceScene() {
           const materials = row.map(m => m.material)
           const dir = rowIdx % 2 === 0 ? 1 : -1
 
+          // Wave acceleration: outer rows move FASTER (gains momentum = physical wave)
+          // pairIdx: 0=centre, 1=next, 2=outer → speed factor 1.0, 0.82, 0.65
+          const speedFactor = Math.max(0.65, 1.0 - pairIdx * 0.18)
+          const riseDur  = RISE_DUR * speedFactor
+          const fallDur  = FALL_DUR * speedFactor
+
           row.forEach((mesh, mi) => {
             tl.to(mesh.position, {
               y: mesh.userData.origY + amp,
-              duration: RISE_DUR,
+              duration: riseDur,
               ease: 'power3.out',
               delay: mi * dir * 0.006,
             }, t)
           })
 
           tl.to(materials, {
-            emissiveIntensity: 0.95 + amp * 0.35,  // BRIGHT gold peak
-            duration: RISE_DUR * 0.4,
+            emissiveIntensity: 0.95 + amp * 0.35,
+            duration: riseDur * 0.4,
             stagger: dir * 0.008,
             onStart() { materials.forEach(m => m.emissive?.copy(PEAK_COLOR)) },
           }, t)
 
           tl.to(materials, {
             emissiveIntensity: 0.18,
-            duration: RISE_DUR * 0.35,
-          }, t + RISE_DUR * 0.55)
+            duration: riseDur * 0.35,
+          }, t + riseDur * 0.55)
 
           row.forEach((mesh, mi) => {
             tl.to(mesh.position, {
               y: mesh.userData.origY,
-              duration: FALL_DUR,
+              duration: fallDur,
               ease: 'power3.out',
               delay: mi * dir * 0.006,
-            }, t + RISE_DUR * 0.70)
+            }, t + riseDur * 0.70)
           })
 
           tl.to(materials, {
             emissiveIntensity: 0,
-            duration: FALL_DUR * 0.85,
+            duration: fallDur * 0.85,
             stagger: dir * 0.006,
-          }, t + RISE_DUR * 0.80)
+          }, t + riseDur * 0.80)
         })
       })
 

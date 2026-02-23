@@ -85,6 +85,35 @@ function CameraRig({ phaseRef }) {
   return null
 }
 
+// Camera: slow orbital sweep during exploded state to show internal components
+function CameraRig({ phaseRef }) {
+  useFrame(({ camera, clock }) => {
+    const t     = clock.elapsedTime
+    const phase = phaseRef.current
+    let tx, ty, tz
+
+    if (phase === 'floating') {
+      // Arc 20° around exploded board — viewer sees PCB, plate, switches
+      const arc = Math.sin(t * 0.22) * 0.36   // ±0.36 rad = ±20°
+      tx = Math.sin(arc) * 5.2
+      ty = 2.6 + Math.sin(t * 0.15) * 0.3   // slight Y breathing
+      tz = Math.cos(arc) * 5.2
+    } else if (phase === 'assemble') {
+      // Smoothly return to front-face during reassembly
+      tx = 0; ty = 2.0; tz = 5.0
+    } else {
+      // Hold assembled: normal viewing angle
+      tx = 0; ty = 1.8; tz = 4.8
+    }
+
+    camera.position.x += (tx - camera.position.x) * 0.018
+    camera.position.y += (ty - camera.position.y) * 0.018
+    camera.position.z += (tz - camera.position.z) * 0.018
+    camera.lookAt(0, 0, 0)
+  })
+  return null
+}
+
 export default function LiquidChromeScene() {
   const groupRef     = useRef()
   const floatRef     = useRef(null)
@@ -110,7 +139,7 @@ export default function LiquidChromeScene() {
         // Each layer: different speed + phase + amplitude
         const freq  = 0.45 + li * 0.08
         const phase = li * (Math.PI * 0.55)
-        const drift = Math.sin(t * freq + phase) * 0.0045
+        const drift = Math.sin(t * freq + phase) * 0.012  // 0.012 local × 17 = 0.20 world — clearly visible
         const def   = LAYER_DEFS[li]
         objs.forEach(obj => {
           if (obj.userData.origY === undefined) return

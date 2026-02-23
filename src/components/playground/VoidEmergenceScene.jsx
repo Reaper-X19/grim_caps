@@ -105,7 +105,22 @@ export default function ShatterScene() {
         }
       })
 
-      // ── PHASE 1: EXPLOSION (t=0) ─────────────────────────────────────────
+      // ── PHASE 0: CHARGE-UP ANTICIPATION (0.5s pre-explosion glow) ───────────
+      // Keys throb white — viewer feels something is about to happen
+      const chargeColor = new THREE.Color('#ffffff')
+      keycaps.forEach((mesh) => {
+        tl.to(mesh.material, {
+          emissiveIntensity: 0.0, duration: 0.01,
+          onStart() { mesh.material.emissive.copy(chargeColor) },
+        }, 0)
+        // Build up glow 0→1 (charge)
+        tl.to(mesh.material, { emissiveIntensity: 1.2, duration: 0.45, ease: 'power2.in' }, 0.02)
+        // Spike to max just before explosion
+        tl.to(mesh.material, { emissiveIntensity: 2.2, duration: 0.08, ease: 'power4.in' }, 0.47)
+      })
+      tl.to({}, { duration: 0.55 })  // wait for charge
+
+      // ── PHASE 1: EXPLOSION ───────────────────────────────────────────────────
       tl.call(() => {
         phaseRef.current = 'explode'
         flashState.intensity = 22.0
@@ -114,7 +129,7 @@ export default function ShatterScene() {
           y: (Math.random() - 0.5) * 1.2,
           z: 2.0,
         }
-      }, null, 0)
+      }, null, 0.55)
 
       keycaps.forEach((mesh) => {
         // True 3D uniform scatter — normalized random direction
@@ -131,21 +146,23 @@ export default function ShatterScene() {
           x: ox.x + nx * dist,
           y: ox.y + ny * dist,
           z: ox.z + nz * dist,
-          duration: 2.6, ease: 'power3.out',
-        }, 0)
+          duration: 1.6, ease: 'power4.out',  // shorter = more explosive snap
+        }, 0.55)
         tl.to(mesh.rotation, {
           x: mesh.userData.origRot.x + (Math.random() - 0.5) * Math.PI * 4.0,
           y: mesh.userData.origRot.y + (Math.random() - 0.5) * Math.PI * 6.0,
           z: mesh.userData.origRot.z + (Math.random() - 0.5) * Math.PI * 3.0,
-          duration: 2.6, ease: 'power2.out',
-        }, 0)
-        // Emissive glow while airborne
-        tl.to(mesh.material, { emissiveIntensity: 0.28, duration: 0.7 }, 0.30)
+          duration: 1.6, ease: 'power3.out',
+        }, 0.55)
+        // Emissive settles to blue glow while airborne
+        tl.to(mesh.material, { emissiveIntensity: 0.28, duration: 0.5,
+          onStart() { mesh.material.emissive.set('#3355ff') }
+        }, 0.95)
       })
 
-      // ── PHASE 2: SCATTER HOLD (keys tumble freely via useFrame) ──────────
-      const HOLD_START = 2.7
-      tl.to({}, { duration: 3.5 }, HOLD_START)   // 3.5s admire the chaos
+      // ── PHASE 2: SCATTER HOLD ────────────────────────────────────────────────
+      const HOLD_START = 0.55 + 1.65
+      tl.to({}, { duration: 3.5 }, HOLD_START)
 
       // ── PHASE 3: CONVERGENCE — magnetic snap back ─────────────────────────
       const CONV_START = HOLD_START + 3.5
@@ -183,6 +200,7 @@ export default function ShatterScene() {
       tl.to({}, { duration: 4.0 }, ASSEMBLE_END)
     }
 
+    // Small 800ms gap then restart — gives breathing room
     buildCycle()
   })
 

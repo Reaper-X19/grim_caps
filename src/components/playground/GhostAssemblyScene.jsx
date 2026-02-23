@@ -39,21 +39,26 @@ function CameraRig({ phaseRef }) {
     let tx, ty, tz
 
     if (phase === 'idle') {
-      // Tight close-up before assembly starts
-      tx = 0.8; ty = 0.8; tz = 3.0
+      // Tight close-up before assembly starts — pulls viewer in
+      tx = 0.6; ty = 1.2; tz = 3.5
     } else if (phase === 'assembling') {
-      // Slow pull-back as columns arrive
-      const sway = Math.sin(elapsed.current * 0.12) * 0.3
-      tx = 0.6 + sway; ty = 1.8; tz = 5.5
+      // Pull back to reveal full board as columns arrive one by one
+      const sway = Math.sin(elapsed.current * 0.14) * 0.3
+      tx = 0.5 + sway; ty = 2.2; tz = 5.0
+    } else if (phase === 'assembled') {
+      // CINEMATIC DOLLYIN: push into keyboard as gold scanline sweeps across
+      // Camera moves right-to-left slightly following the scan direction
+      const scanFollow = Math.sin(elapsed.current * 0.28) * 0.25
+      tx = scanFollow; ty = 1.7; tz = 4.2  // <-- close-up push
     } else {
-      // Admire & scan: gentle sway
+      // Fadeout / idle: gentle sway, pull back
       const sway = Math.sin(elapsed.current * 0.04) * 0.4
       tx = sway; ty = 2.0; tz = 5.5
     }
 
-    camera.position.x += (tx - camera.position.x) * 0.012
-    camera.position.y += (ty - camera.position.y) * 0.012
-    camera.position.z += (tz - camera.position.z) * 0.012
+    camera.position.x += (tx - camera.position.x) * 0.015
+    camera.position.y += (ty - camera.position.y) * 0.015
+    camera.position.z += (tz - camera.position.z) * 0.015
     camera.lookAt(0, 0.2, 0)
   })
   return null

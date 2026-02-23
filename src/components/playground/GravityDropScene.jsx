@@ -100,13 +100,21 @@ export default function GravityDropScene() {
 
       shuffled.forEach((mesh, i) => {
         const t = i * STAGGER
-        // Fade in immediately
-        tl.to(mesh.material, { opacity: 1, duration: 0.08 }, t)
-        // Fall with elastic physics (multi-bounce = physical weight)
-        tl.to(mesh.position,  { y: mesh.userData.origY, duration: 1.20, ease: 'elastic.out(0.8, 0.40)' }, t)
-        tl.to(mesh.rotation, { y: mesh.userData.origRotY, duration: 1.00, ease: 'power3.out' }, t)
-        tl.to(mesh.material, { emissiveIntensity: 1.0, duration: 0.05 }, t + 1.12)
-        tl.to(mesh.material, { emissiveIntensity: 0,   duration: 0.75 }, t + 1.17)
+        // Fade in: starts nearly invisible then solidifies as it falls
+        tl.to(mesh.material, { opacity: 0.06, duration: 0.01 }, t)   // ghost-in
+        tl.to(mesh.material, { opacity: 1.0,  duration: 0.60, ease: 'power2.out' }, t + 0.25)
+        // Heavy fall — power4.in = accelerates hard like gravity
+        tl.to(mesh.position, { y: mesh.userData.origY, duration: 1.20, ease: 'power4.in' }, t)
+        // Landing bounce — elastic: keys are metal, bounce is real but quick
+        tl.to(mesh.position, { y: mesh.userData.origY, duration: 0.65, ease: 'elastic.out(1.4, 0.38)' }, t + 1.20)
+        // Unwind the spin on the way down
+        tl.to(mesh.rotation, { y: mesh.userData.origRotY, duration: 1.10, ease: 'power2.in' }, t)
+        // Impact: bright cyan flash (looks like switch registering)
+        tl.to(mesh.material, {
+          emissiveIntensity: 1.2, duration: 0.04,
+          onStart() { mesh.material.emissive?.set('#00ffcc') },
+        }, t + 1.22)
+        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.65 }, t + 1.26)
       })
 
       tl.to({}, { duration: 7.5 })   // hold assembled
