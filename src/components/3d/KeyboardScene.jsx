@@ -24,12 +24,13 @@
 import { Suspense, useState, useCallback, useRef, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, PerspectiveCamera, ContactShadows } from '@react-three/drei'
+import { useControls } from 'leva'
 import * as THREE from 'three'
 import gsap from 'gsap'
 import KeyboardModel from './KeyboardModel'
 
 // ─── Cinematic intro camera ────────────────────────────────────────────────────
-function IntroCamera({ onComplete }) {
+function IntroCamera({ onComplete, camZ, camY }) {
   const { camera } = useThree()
   const orbitRef    = useRef(null)   // receives orbitControls instance from parent via callback
   const elapsed     = useRef(0)
@@ -50,9 +51,9 @@ function IntroCamera({ onComplete }) {
     const progress = t / 3.0
     const ease = 1 - Math.pow(1 - progress, 3)
 
-    // Camera path: z: 22→2.0,  y: 2→5.5
-    const targetZ = 22 + (2.0 - 22) * ease
-    const targetY =  2 + (5.5 -  2) * ease
+    // Camera path: z: 22→camZ,  y: 2→camY
+    const targetZ = 22 + (camZ - 22) * ease
+    const targetY =  2 + (camY -  2) * ease
 
     camera.position.z = targetZ
     camera.position.y = targetY
@@ -68,7 +69,7 @@ function IntroCamera({ onComplete }) {
 }
 
 // ─── Model wrapper with rotation intro ────────────────────────────────────────
-function AnimatedKeyboard() {
+function AnimatedKeyboard({ modelY, finalRotX, finalScale }) {
   const introRef = useRef()
 
   useEffect(() => {
@@ -81,16 +82,15 @@ function AnimatedKeyboard() {
     obj.scale.set(0.85, 0.85, 0.85)
 
     gsap.timeline()
-      .to(obj.rotation, { x: 0.70, y: 0.05, duration: 2.8, ease: 'power3.out' }, 0.4)
+      .to(obj.rotation, { x: finalRotX, y: 0.05, duration: 2.8, ease: 'power3.out' }, 0.4)
       .from(obj.position, { y: -0.3, duration: 2.0, ease: 'power3.out' }, 0.3)
-      .to(obj.scale, { x: 1.12, y: 1.12, z: 1.12, duration: 2.6, ease: 'power3.out' }, 0.3)
-      .to(obj.rotation, { x: 0.67, duration: 0.14, ease: 'power2.in' }, 3.0)
-      .to(obj.rotation, { x: 0.70, duration: 0.40, ease: 'elastic.out(1,0.4)' }, 3.14)
+      .to(obj.scale, { x: finalScale, y: finalScale, z: finalScale, duration: 2.6, ease: 'power3.out' }, 0.3)
+      .to(obj.rotation, { x: finalRotX - 0.03, duration: 0.14, ease: 'power2.in' }, 3.0)
+      .to(obj.rotation, { x: finalRotX, duration: 0.40, ease: 'elastic.out(1,0.4)' }, 3.14)
   }, [])
 
   return (
-    // Shift keyboard down so it sits below the UI instruction bar
-    <group position={[0, -0.55, 0]}>
+    <group position={[0, modelY, 0]}>
       <group ref={introRef}>
         <KeyboardModel />
       </group>
@@ -102,6 +102,15 @@ function AnimatedKeyboard() {
 export default function KeyboardScene() {
   const [canvasKey,    setCanvasKey]    = useState(0)
   const [orbitEnabled, setOrbitEnabled] = useState(false)
+
+  // ── Leva tuning controls ──────────────────────────────────────────────────
+  const { camZ, camY, modelY, finalRotX, finalScale } = useControls('Configurator Camera', {
+    camZ:       { value: 2.0,   min: 0.5,  max: 10,  step: 0.1,  label: 'Camera Z (zoom)' },
+    camY:       { value: 5.5,   min: 0.5,  max: 15,  step: 0.1,  label: 'Camera Y (height)' },
+    modelY:     { value: -0.55, min: -5,   max: 5,   step: 0.05, label: 'Model Y offset' },
+    finalRotX:  { value: 0.70,  min: 0,    max: 1.57, step: 0.01, label: 'Final rotX (tilt)' },
+    finalScale: { value: 1.12,  min: 0.1,  max: 3,   step: 0.01, label: 'Final scale' },
+  })
 
   const handleCreated = useCallback(({ gl }) => {
     const canvas = gl.domElement
@@ -125,7 +134,7 @@ export default function KeyboardScene() {
         <PerspectiveCamera makeDefault position={[0, 2, 22]} fov={50} />
 
         {/* Cinematic intro camera — hands off once done */}
-        {!orbitEnabled && <IntroCamera onComplete={handleIntroDone} />}
+        {!orbitEnabled && <IntroCamera onComplete={handleIntroDone} camZ={camZ} camY={camY} />}
 
         {/* ── Lighting — product reveal quality ── */}
         <ambientLight intensity={0.55} />
@@ -141,7 +150,7 @@ export default function KeyboardScene() {
         <pointLight position={[ 8, 0,  4]} intensity={0.5} color="#ffffff" />
 
         <Suspense fallback={null}>
-          <AnimatedKeyboard />
+          <AnimatedKeyboard modelY={modelY} finalRotX={finalRotX} finalScale={finalScale} />
           <Environment files="/hdr/studio-small.hdr" background={false} environmentIntensity={1.0} />
         </Suspense>
 
