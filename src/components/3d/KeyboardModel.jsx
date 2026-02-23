@@ -1,6 +1,7 @@
 import { useRef, useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
+import { useControls } from 'leva'
 import { Model as KeyboardGLTF } from './Keyboard'
 import useConfiguratorStore from '../../store/configuratorStore'
 import {
@@ -12,6 +13,17 @@ import {
 export default function KeyboardModel() {
   const groupRef = useRef()
   const { camera, raycaster, pointer, gl } = useThree()
+
+  const { posX, posY, posZ, rotX, rotY, rotZ, kbScale } = useControls('Keyboard', {
+    posX:    { value: 0,     min: -5,    max: 5,    step: 0.01 },
+    posY:    { value: -0.5,  min: -5,    max: 5,    step: 0.01 },
+    posZ:    { value: 0,     min: -5,    max: 5,    step: 0.01 },
+    rotX:    { value: -0.75, min: -1.57, max: 1.57, step: 0.01 },
+    rotY:    { value: 0.30,  min: -1.57, max: 1.57, step: 0.01 },
+    rotZ:    { value: 0,     min: -1.57, max: 1.57, step: 0.01 },
+    kbScale: { value: 26,    min: 1,     max: 40,   step: 0.5  },
+  })
+
 
   // Store for material references and textures
   const materialsRef = useRef(new Map())
@@ -292,9 +304,9 @@ export default function KeyboardModel() {
   return (
     <group
       ref={groupRef}
-      scale={22}
-      position={[0, -0.5, 0]}
-      rotation={[-0.60, 0.15, 0]}
+      scale={kbScale}
+      position={[posX, posY, posZ]}
+      rotation={[rotX, rotY, rotZ]}
     >
       <KeyboardGLTF />
     </group>
