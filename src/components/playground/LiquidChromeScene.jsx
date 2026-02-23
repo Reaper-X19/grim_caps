@@ -61,55 +61,39 @@ const COL_DELAY  = 0.055   // was 0.032
 const ROT_ASSEMBLED = { x: 0.40, y: 0.10 }
 const ROT_FLAT      = { x: 0.05, y: 0.00 }
 
+// Camera: phases-aware — orbital sweep while floating, front-face on reassembly
 function CameraRig({ phaseRef }) {
   const elapsed = useRef(0)
-  useFrame(({ camera }, delta) => {
+  useFrame(({ camera, clock }, delta) => {
     elapsed.current += delta
-    const t = elapsed.current
-    const exploded = phaseRef.current === 'explode' || phaseRef.current === 'exploded'
-
-    let tx, ty, tz, lookY
-    if (exploded) {
-      const drift = Math.sin(t * 0.09) * 0.8
-      tx = drift; ty = 2.8; tz = 10.0; lookY = 0.3
-    } else {
-      tx = Math.sin(t * 0.16) * 1.4
-      tz = 5.5 + Math.cos(t * 0.16) * 0.5
-      ty = 1.6; lookY = 0.1
-    }
-    camera.position.x += (tx - camera.position.x) * 0.025
-    camera.position.y += (ty - camera.position.y) * 0.025
-    camera.position.z += (tz - camera.position.z) * 0.025
-    camera.lookAt(0, lookY, 0)
-  })
-  return null
-}
-
-// Camera: slow orbital sweep during exploded state to show internal components
-function CameraRig({ phaseRef }) {
-  useFrame(({ camera, clock }) => {
     const t     = clock.elapsedTime
     const phase = phaseRef.current
     let tx, ty, tz
 
     if (phase === 'floating') {
-      // Arc 20° around exploded board — viewer sees PCB, plate, switches
-      const arc = Math.sin(t * 0.22) * 0.36   // ±0.36 rad = ±20°
+      // Slow arc ±20° so viewer sees PCB, plate & switches from multiple angles
+      const arc = Math.sin(t * 0.22) * 0.36
       tx = Math.sin(arc) * 5.2
-      ty = 2.6 + Math.sin(t * 0.15) * 0.3   // slight Y breathing
+      ty = 2.6 + Math.sin(t * 0.15) * 0.3
       tz = Math.cos(arc) * 5.2
+    } else if (phase === 'exploded' || phase === 'explode') {
+      // Brief transition drift before settling into full orbit
+      const drift = Math.sin(t * 0.09) * 0.8
+      tx = drift; ty = 2.8; tz = 10.0
     } else if (phase === 'assemble') {
-      // Smoothly return to front-face during reassembly
+      // Front-face return during reassembly
       tx = 0; ty = 2.0; tz = 5.0
     } else {
-      // Hold assembled: normal viewing angle
-      tx = 0; ty = 1.8; tz = 4.8
+      // Hold assembled: slow sway at comfortable viewing angle
+      tx = Math.sin(elapsed.current * 0.16) * 1.4
+      tz = 5.5 + Math.cos(elapsed.current * 0.16) * 0.5
+      ty = 1.6
     }
 
-    camera.position.x += (tx - camera.position.x) * 0.018
-    camera.position.y += (ty - camera.position.y) * 0.018
-    camera.position.z += (tz - camera.position.z) * 0.018
-    camera.lookAt(0, 0, 0)
+    camera.position.x += (tx - camera.position.x) * 0.022
+    camera.position.y += (ty - camera.position.y) * 0.022
+    camera.position.z += (tz - camera.position.z) * 0.022
+    camera.lookAt(0, 0.1, 0)
   })
   return null
 }
