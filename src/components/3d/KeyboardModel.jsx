@@ -292,7 +292,7 @@ export default function KeyboardModel() {
   return (
     <group
       ref={groupRef}
-      scale={12}
+      scale={16}
       position={[0, 0, 0]}
       rotation={[-0.3, 0, 0]}
     >
