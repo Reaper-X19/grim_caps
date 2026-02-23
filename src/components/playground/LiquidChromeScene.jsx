@@ -91,14 +91,33 @@ export default function LiquidChromeScene() {
   const collectedRef = useRef(false)
   const tlRef        = useRef(null)
   const phaseRef     = useRef('hold')
+  const layerObjsRef = useRef([])   // exposed to useFrame for oscillation
 
   useEffect(() => () => tlRef.current?.kill(), [])
 
-  // Breathing float on assembled hold
+  // Breathing float on assembled hold + layer oscillation while floating
   useFrame(({ clock }) => {
     if (!floatRef.current) return
     const targetY = (phaseRef.current === 'hold') ? Math.sin(clock.elapsedTime * 0.70) * 0.08 : 0
     floatRef.current.position.y += (targetY - floatRef.current.position.y) * 0.04
+
+    // Per-layer sinusoidal drift while exploded (zero-gravity feel)
+    // Only runs after GSAP explode tweens are 100% done ('floating' phase)
+    if (phaseRef.current === 'floating') {
+      const t = clock.elapsedTime
+      layerObjsRef.current.forEach((objs, li) => {
+        if (!objs.length) return
+        // Each layer: different speed + phase + amplitude
+        const freq  = 0.45 + li * 0.08
+        const phase = li * (Math.PI * 0.55)
+        const drift = Math.sin(t * freq + phase) * 0.0045
+        const def   = LAYER_DEFS[li]
+        objs.forEach(obj => {
+          if (obj.userData.origY === undefined) return
+          obj.position.y = (obj.userData.origY + def.delta) + drift
+        })
+      })
+    }
   })
 
   useFrame(() => {
@@ -167,6 +186,9 @@ export default function LiquidChromeScene() {
       }
     }
 
+    // Expose layer objects to the breathing useFrame for oscillation
+    layerObjsRef.current = layerObjs
+
     // ── Cycle ─────────────────────────────────────────────────────────────
     function buildCycle() {
       tlRef.current?.kill()
@@ -197,18 +219,21 @@ export default function LiquidChromeScene() {
       // ── PHASE 2: HOLD ─────────────────────────────────────────────────
       const holdStart = 0.85
       tl.call(() => { phaseRef.current = 'exploded' }, null, holdStart)
+      // After tweens fully settle, switch to 'floating' for layer oscillation
+      tl.call(() => { phaseRef.current = 'floating' }, null, holdStart + 1.8)
       tl.to({}, { duration: 4.5 }, holdStart)
 
       // ── PHASE 3: REASSEMBLE ───────────────────────────────────────────
-      const rStart = holdStart + 2.8
+      const rStart = holdStart + 4.5
       tl.call(() => { phaseRef.current = 'assemble' }, null, rStart)
 
       REASSEMBLE_STEPS.forEach((stepIds, si) => {
         const st = rStart + si * STEP_DELAY
         stepIds.forEach(id => {
           layerObjs[layerIdx[id]].forEach(obj => {
-            tl.to(obj.position, { y: obj.userData.origY, duration: 0.70, ease: 'expo.out' }, st)
-            killGlow(tl, obj, st + 0.65, 0.35)
+            // Elastic snap for satisfying assembly feel
+            tl.to(obj.position, { y: obj.userData.origY, duration: 0.65, ease: 'elastic.out(1.2, 0.55)' }, st)
+            killGlow(tl, obj, st + 0.55, 0.35)
           })
         })
       })

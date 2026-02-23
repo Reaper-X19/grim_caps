@@ -124,7 +124,7 @@ export default function ShatterScene() {
         const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
         nx /= len; ny /= len; nz /= len
 
-        const dist = 0.22 + Math.random() * 0.28    // 0.22–0.50 local → 3.7–8.5 world
+        const dist = 0.32 + Math.random() * 0.33    // 0.32–0.65 local → 5.4–11 world
         const ox   = mesh.userData.origPos
 
         tl.to(mesh.position, {
@@ -147,29 +147,34 @@ export default function ShatterScene() {
       const HOLD_START = 2.7
       tl.to({}, { duration: 3.5 }, HOLD_START)   // 3.5s admire the chaos
 
-      // ── PHASE 3: CONVERGENCE — slow reverse burst ─────────────────────────
+      // ── PHASE 3: CONVERGENCE — magnetic snap back ─────────────────────────
       const CONV_START = HOLD_START + 3.5
       tl.call(() => { phaseRef.current = 'converge' }, null, CONV_START)
 
+      // Implosion flash: all scattered keys simultaneously spike bright
+      keycaps.forEach((mesh) => {
+        tl.to(mesh.material, { emissiveIntensity: 1.2, duration: 0.08 }, CONV_START)
+      })
+
       keycaps.forEach((mesh) => {
         // Random stagger so they don't all arrive together (0 to 0.7s offset)
-        const staggerT = CONV_START + Math.random() * 0.70
+        const staggerT = CONV_START + 0.06 + Math.random() * 0.70
         tl.to(mesh.position, {
           x: mesh.userData.origPos.x,
           y: mesh.userData.origPos.y,
           z: mesh.userData.origPos.z,
           duration: 3.2,
-          ease: 'power2.inOut',
+          ease: 'back.out(2.2)',  // overshoot past origin, spring back = MAGNETIC
         }, staggerT)
         tl.to(mesh.rotation, {
           x: mesh.userData.origRot.x,
           y: mesh.userData.origRot.y,
           z: mesh.userData.origRot.z,
           duration: 3.2,
-          ease: 'power2.inOut',
+          ease: 'power3.out',
         }, staggerT)
-        // Emissive fades as each key lands
-        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.50 }, staggerT + 2.75)
+        // Emissive fades after the flash as each key lands
+        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.55 }, staggerT + 2.75)
       })
 
       // ── PHASE 4: HOLD ASSEMBLED ───────────────────────────────────────────

@@ -26,7 +26,7 @@ const DROP_HEIGHT  = 1.20    // local (×17 = 20.4 world — dramatic sky-fall)
 const FALL_DUR     = 1.35    // was 0.80
 const COL_STAGGER  = 0.185   // was 0.110
 const ROW_STAGGER  = 0.030   // was 0.018
-const SPIN_REVS    = 3.0     // 1080° during fall
+const SPIN_REVS    = 5.0     // 1800° during fall — dramatic coin-drop
 const SCAN_DUR     = 3.5     // was 2.2
 const ADMIRE_DUR   = 4.0     // was 2.0
 const FADEOUT_DUR  = 1.7     // was 1.0
@@ -154,17 +154,25 @@ export default function GenesisScene() {
       // Phase 3: Gold scan L→R
       const scanStart = lastKeyTime + 0.6
       tl.call(() => { phaseRef.current = 'assembled' }, null, scanStart)
+
+      // Triumph flash: ALL keys spike white simultaneously
+      allKeycaps.forEach(mesh => {
+        tl.to(mesh.material, {
+          emissiveIntensity: 1.8, duration: 0.06,
+          onStart() { mesh.material.emissive.set('#ffffff') },
+        }, scanStart - 0.12)
+        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.55 }, scanStart - 0.06)
+      })
+
       columns.forEach((colMeshes, colIdx) => {
         const t = scanStart + (colIdx / columns.length) * SCAN_DUR
         colMeshes.forEach(mesh => {
           tl.to(mesh.material, {
-            emissiveIntensity: 0.45,
-            duration: 0.08,
+            emissiveIntensity: 1.10, duration: 0.08,
             onStart() { mesh.material.emissive.copy(goldColor) },
           }, t)
           tl.to(mesh.material, {
-            emissiveIntensity: 0,
-            duration: 0.65,
+            emissiveIntensity: 0, duration: 0.75,
             onComplete() { mesh.material.emissive.copy(tealColor) },
           }, t + 0.08)
         })
@@ -176,6 +184,20 @@ export default function GenesisScene() {
 
       // Phase 5: Fade out keycaps + float back up → then restart
       const fadeStart = admireStart + ADMIRE_DUR
+
+      // 'Signature run' — rapid teal flash L→R (like a keyboard self-test)
+      const sigStart = fadeStart - 0.6
+      columns.forEach((colMeshes, colIdx) => {
+        const t = sigStart + colIdx * 0.006
+        colMeshes.forEach(mesh => {
+          tl.to(mesh.material, {
+            emissiveIntensity: 0.9, duration: 0.025,
+            onStart() { mesh.material.emissive.copy(tealColor) },
+          }, t)
+          tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.08 }, t + 0.025)
+        })
+      })
+
       allKeycaps.forEach(mesh => {
         tl.to(mesh.material, { opacity: 0, duration: FADEOUT_DUR, ease: 'power2.in' }, fadeStart)
         // Float back up slightly as they dematerialise

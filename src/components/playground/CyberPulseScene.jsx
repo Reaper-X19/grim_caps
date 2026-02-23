@@ -19,7 +19,7 @@ import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-const LIFT         = 0.08    // local Y (×17 = 1.36 world — VISIBLE!)
+const LIFT         = 0.12    // local Y (×17 = 2.04 world — dramatic heave)
 const LIFT_DUR     = 0.55    // was 0.32
 const FALL_DUR     = 0.85    // was 0.50
 const COLUMN_DELAY = 0.058   // was 0.035
@@ -68,6 +68,7 @@ export default function CyberPulseScene() {
   const progressRef  = useRef(0)
   const spotRef      = useRef()
   const colorIdxRef  = useRef(0)
+  const cycleCount   = useRef(0)   // tracks which cycle for direction alternation
 
   useEffect(() => () => tlRef.current?.kill(), [])
 
@@ -89,13 +90,33 @@ export default function CyberPulseScene() {
     })
 
     function buildCycle() {
-      const accent = ACCENT_COLORS[colorIdxRef.current % ACCENT_COLORS.length]
+      const cycleIdx = cycleCount.current++
+      const isMega   = cycleIdx > 0 && cycleIdx % 4 === 0
+      const goRight  = cycleIdx % 2 === 0     // even = L→R, odd = R→L
+      const accent   = ACCENT_COLORS[colorIdxRef.current % ACCENT_COLORS.length]
       colorIdxRef.current++
+
+      const activeLift = isMega ? LIFT * 2.5 : LIFT
+      const holdTime   = isMega ? 3.5 : HOLD_AFTER
+
+      const orderedColumns = goRight ? columns : [...columns].reverse()
+
       const tl = gsap.timeline({ onComplete: buildCycle })
 
-      columns.forEach((colMeshes, colIdx) => {
+      // Mega wave: spotlight turns white and intensifies
+      if (isMega && spotRef.current) {
+        spotRef.current.color.set('#ffffff')
+        spotRef.current.intensity = 28.0
+        tl.call(() => {
+          if (spotRef.current) spotRef.current.intensity = 12.0
+        }, null, orderedColumns.length * COLUMN_DELAY + LIFT_DUR + FALL_DUR)
+      }
+
+      orderedColumns.forEach((colMeshes, colIdx) => {
         const waveT    = colIdx * COLUMN_DELAY
-        const waveNorm = colIdx / (columns.length - 1)
+        // For display tracking, always use logical L→R column index
+        const logicalIdx = goRight ? colIdx : (columns.length - 1 - colIdx)
+        const waveNorm = logicalIdx / (columns.length - 1)
 
         tl.call(() => {
           progressRef.current = waveNorm
@@ -110,10 +131,10 @@ export default function CyberPulseScene() {
         // RISE — explicit target (origY + LIFT), never overshoots
         colMeshes.forEach((mesh, mi) => {
           tl.to(mesh.position, {
-            y: mesh.userData.origY + LIFT,
+            y: mesh.userData.origY + activeLift,
             duration: LIFT_DUR,
-            ease: 'power3.out',
-            delay: mi * 0.008,
+            ease: isMega ? 'power4.out' : 'power3.out',
+            delay: mi * 0.010,
           }, waveT)
         })
 
@@ -144,8 +165,8 @@ export default function CyberPulseScene() {
       })
 
       // Pause, then reset Y to prevent float drift
-      const totalTime = columns.length * COLUMN_DELAY + LIFT_DUR + FALL_DUR
-      tl.to({}, { duration: HOLD_AFTER }, totalTime)
+      const totalTime = orderedColumns.length * COLUMN_DELAY + LIFT_DUR + FALL_DUR
+      tl.to({}, { duration: holdTime }, totalTime)
       tl.call(() => {
         columns.flat().forEach(m => { m.position.y = m.userData.origY })
       })

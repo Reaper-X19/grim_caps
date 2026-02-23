@@ -19,14 +19,15 @@ import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 import { KEYBOARD_ROWS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-const LIFT      = 0.07    // local (×17 = 1.19 world — VISIBLE!)
+const LIFT      = 0.12    // local (×17 = 2.04 world — DRAMATIC!)
 const RISE_DUR  = 0.65    // was 0.38
 const FALL_DUR  = 1.00    // was 0.60
 const ROW_DELAY = 0.17    // was 0.10
 const HOLD      = 4.0     // was 2.0
 
-const PEAK_COLOR = new THREE.Color('#ffcc44')
-const REST_COLOR = new THREE.Color('#334466')
+const PEAK_COLOR     = new THREE.Color('#ffcc44')
+const REST_COLOR     = new THREE.Color('#334466')
+const CRESCENDO_COLOR = new THREE.Color('#00ffcc')  // teal burst on crescendo
 
 function CameraRig({ peakRowRef }) {
   const elapsed = useRef(0)
@@ -105,9 +106,9 @@ export default function ResonanceScene() {
           })
 
           tl.to(materials, {
-            emissiveIntensity: 0.50 + amp * 0.22,  // brighter glow at peak
+            emissiveIntensity: 0.95 + amp * 0.35,  // BRIGHT gold peak
             duration: RISE_DUR * 0.4,
-            stagger: dir * 0.006,
+            stagger: dir * 0.008,
             onStart() { materials.forEach(m => m.emissive?.copy(PEAK_COLOR)) },
           }, t)
 
@@ -134,9 +135,33 @@ export default function ResonanceScene() {
       })
 
       const totalTime = expandOrder.length * ROW_DELAY + RISE_DUR + FALL_DUR
-      tl.to({}, { duration: HOLD }, totalTime)
+
+      // ── CRESCENDO BURST — all rows simultaneously after ripple settles ──────────
+      // Amplitude gradient: centre rows (2&3) lift LEAST, outer rows (0&5) lift MOST
+      // Reverse of the ripple — like a shockwave compression hitting the edges
+      const burstStart = totalTime + 0.8
+      const burstAmp   = [1.0, 0.75, 0.50, 0.50, 0.75, 1.0]  // outer rows pulse hardest
+      rows.forEach((row, rowIdx) => {
+        if (!row?.length) return
+        const amp  = LIFT * 1.4 * (burstAmp[rowIdx] ?? 1.0)
+        const mats = row.map(m => m.material)
+        row.forEach((mesh, mi) => {
+          tl.to(mesh.position, { y: mesh.userData.origY + amp, duration: 0.45, ease: 'power3.out', delay: mi * 0.004 }, burstStart)
+        })
+        tl.to(mats, {
+          emissiveIntensity: 1.3, duration: 0.12,
+          stagger: 0.004,
+          onStart() { mats.forEach(m => m.emissive?.copy(CRESCENDO_COLOR)) },
+        }, burstStart)
+        row.forEach((mesh, mi) => {
+          tl.to(mesh.position, { y: mesh.userData.origY, duration: FALL_DUR * 1.3, ease: 'power3.out', delay: mi * 0.004 }, burstStart + 0.45)
+        })
+        tl.to(mats, { emissiveIntensity: 0, duration: FALL_DUR * 1.2, stagger: 0.004 }, burstStart + 0.50)
+      })
+
+      tl.to({}, { duration: HOLD }, burstStart + FALL_DUR * 1.3 + 0.6)
       // Hard Y reset
-      tl.call(() => { rows.flat().forEach(m => { m.position.y = m.userData.origY }) }, null, totalTime + HOLD)
+      tl.call(() => { rows.flat().forEach(m => { m.position.y = m.userData.origY }) })
       tlRef.current = tl
     }
     buildCycle()

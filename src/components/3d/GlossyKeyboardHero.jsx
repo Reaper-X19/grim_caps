@@ -35,13 +35,20 @@ const _euler   = new THREE.Euler()
 const _axisX   = new THREE.Vector3(1, 0, 0)
 const _axisY   = new THREE.Vector3(0, 1, 0)
 
+// Module-level camera shake state shared between component & rig
+const _heroShake = { x: 0, y: 0 }
+
 // ─── Camera rig ───────────────────────────────────────────────────────────────
+// Exported so the parent page can mount it inside the same <Canvas>
 export function HeroCameraRig({ mouse }) {
   useFrame(({ camera }) => {
-    const tx = (mouse?.current?.x ?? 0) * 0.08
-    const ty = (mouse?.current?.y ?? 0) * 0.04 + 0.05
-    camera.position.x += (tx - camera.position.x) * 0.030
-    camera.position.y += (ty - camera.position.y) * 0.030
+    const tx = (mouse?.current?.x ?? 0) * 0.10
+    const ty = (mouse?.current?.y ?? 0) * 0.05 + 0.05
+    camera.position.x += (tx + _heroShake.x - camera.position.x) * 0.030
+    camera.position.y += (ty + _heroShake.y - camera.position.y) * 0.030
+    // Decay shake
+    _heroShake.x *= 0.82
+    _heroShake.y *= 0.82
     camera.lookAt(0, 0.1, 0)
   })
   return null
@@ -132,7 +139,10 @@ export default function GlossyKeyboardHero({ mouse }) {
 
       const tl = gsap.timeline()
 
-      // ── Phase 1: Gravity drop — accelerating fall ──────────────────────
+      // ── Windup anticipation: tilt FURTHER back before the fall ────────────
+      tl.to(g.rotation, { z: 0.88, duration: 0.28, ease: 'power2.out' }, 0.0)
+
+      // ── Phase 1: Gravity drop — accelerating fall ─────────────────────────
       // Y drops from 4.5 → -0.3 (slight overshoot below final 0)
       tl.to(g.position, {
         y: -0.3,
@@ -147,11 +157,11 @@ export default function GlossyKeyboardHero({ mouse }) {
         ease: 'power2.in',
       }, 0.3)
 
-      // ── Phase 2: Elastic bounce — overshoots and settles ───────────────
+      // ── Phase 2: Elastic bounce — overshoots and settles ───────────────────
       tl.to(g.position, {
         y: 0,
-        duration: 1.4,
-        ease: 'elastic.out(1.0, 0.35)',
+        duration: 1.6,
+        ease: 'elastic.out(1.2, 0.30)',  // snappier multi-bounce
       }, 1.2)
 
       // Rotation finishes settling
@@ -167,6 +177,12 @@ export default function GlossyKeyboardHero({ mouse }) {
         duration: 1.0,
         ease: 'back.out(1.4)', // slight overshoot for punch
       }, 1.0)
+
+      // ── Camera JOLT on landing ───────────────────────────────────────────────────
+      tl.call(() => {
+        _heroShake.y = -0.40
+        _heroShake.x = (Math.random() - 0.5) * 0.22
+      }, null, 1.22)
 
       // ── Phase 3: Glow pulse on landing ─────────────────────────────────
       // Emission spikes briefly on impact
@@ -198,8 +214,8 @@ export default function GlossyKeyboardHero({ mouse }) {
     if (landed) {
       const mx = mouse?.current?.x ?? 0
       const my = mouse?.current?.y ?? 0
-      mouseX.current += (my * -0.024 - mouseX.current) * 0.032
-      mouseY.current += (mx *  0.018 - mouseY.current) * 0.032
+      mouseX.current += (my * -0.048 - mouseX.current) * 0.040
+      mouseY.current += (mx *  0.030 - mouseY.current) * 0.040
 
       _qMouseX.setFromAxisAngle(_axisX, mouseX.current)
       _qMouseY.setFromAxisAngle(_axisY, mouseY.current)

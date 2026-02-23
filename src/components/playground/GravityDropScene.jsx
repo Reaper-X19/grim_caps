@@ -78,7 +78,7 @@ export default function GravityDropScene() {
     })
 
     const shuffled    = [...keys].sort(() => Math.random() - 0.5)
-    const impactColor = new THREE.Color('#ff8800')
+    const impactColor = new THREE.Color('#ffffff')  // pure white impact flash
 
     function buildCycle() {
       shuffled.forEach((m) => {
@@ -102,14 +102,22 @@ export default function GravityDropScene() {
         const t = i * STAGGER
         // Fade in immediately
         tl.to(mesh.material, { opacity: 1, duration: 0.08 }, t)
-        // Fall with bounce
-        tl.to(mesh.position,  { y: mesh.userData.origY, duration: 1.20, ease: 'bounce.out' }, t)
-        tl.to(mesh.rotation, { y: mesh.userData.origRotY, duration: 1.20, ease: 'power3.out' }, t)
-        tl.to(mesh.material, { emissiveIntensity: 0.55, duration: 0.05 }, t + 1.12)
-        tl.to(mesh.material, { emissiveIntensity: 0,    duration: 1.10 }, t + 1.17)
+        // Fall with elastic physics (multi-bounce = physical weight)
+        tl.to(mesh.position,  { y: mesh.userData.origY, duration: 1.20, ease: 'elastic.out(0.8, 0.40)' }, t)
+        tl.to(mesh.rotation, { y: mesh.userData.origRotY, duration: 1.00, ease: 'power3.out' }, t)
+        tl.to(mesh.material, { emissiveIntensity: 1.0, duration: 0.05 }, t + 1.12)
+        tl.to(mesh.material, { emissiveIntensity: 0,   duration: 0.75 }, t + 1.17)
       })
 
       tl.to({}, { duration: 7.5 })   // hold assembled
+
+      // ── FINALE: all-keys simultaneous white flash before reset ────────────────────
+      // Triggered near end of hold — signals the keyboard is "alive"
+      const holdEnd = shuffled.length * STAGGER + 1.20 + 1.8 + 7.5
+      shuffled.forEach((mesh) => {
+        tl.to(mesh.material, { emissiveIntensity: 1.4, duration: 0.07 }, holdEnd - 0.5)
+        tl.to(mesh.material, { emissiveIntensity: 0,   duration: 0.45 }, holdEnd - 0.43)
+      })
 
       // Fade out / float back up for reset
       const fallEnd = shuffled.length * STAGGER + 0.6
