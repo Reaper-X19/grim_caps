@@ -23,13 +23,13 @@ import ClonedKeyboard         from './ClonedKeyboard'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
 const DROP_HEIGHT  = 1.20    // local (×17 = 20.4 world — dramatic sky-fall)
-const FALL_DUR     = 0.80    // seconds per key
-const COL_STAGGER  = 0.110   // 16 cols × 0.110 = 1.76s spread
-const ROW_STAGGER  = 0.018   // within each column
+const FALL_DUR     = 1.35    // was 0.80
+const COL_STAGGER  = 0.185   // was 0.110
+const ROW_STAGGER  = 0.030   // was 0.018
 const SPIN_REVS    = 3.0     // 1080° during fall
-const SCAN_DUR     = 2.2     // gold scan
-const ADMIRE_DUR   = 2.0     // hold assembled
-const FADEOUT_DUR  = 1.0     // keys float back up / fade
+const SCAN_DUR     = 3.5     // was 2.2
+const ADMIRE_DUR   = 4.0     // was 2.0
+const FADEOUT_DUR  = 1.7     // was 1.0
 
 function CameraRig({ phaseRef }) {
   const elapsed = useRef(0)

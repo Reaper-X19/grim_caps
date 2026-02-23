@@ -131,51 +131,51 @@ export default function ShatterScene() {
           x: ox.x + nx * dist,
           y: ox.y + ny * dist,
           z: ox.z + nz * dist,
-          duration: 1.6, ease: 'power3.out',
+          duration: 2.6, ease: 'power3.out',
         }, 0)
         tl.to(mesh.rotation, {
           x: mesh.userData.origRot.x + (Math.random() - 0.5) * Math.PI * 4.0,
           y: mesh.userData.origRot.y + (Math.random() - 0.5) * Math.PI * 6.0,
           z: mesh.userData.origRot.z + (Math.random() - 0.5) * Math.PI * 3.0,
-          duration: 1.6, ease: 'power2.out',
+          duration: 2.6, ease: 'power2.out',
         }, 0)
         // Emissive glow while airborne
-        tl.to(mesh.material, { emissiveIntensity: 0.28, duration: 0.5 }, 0.20)
+        tl.to(mesh.material, { emissiveIntensity: 0.28, duration: 0.7 }, 0.30)
       })
 
       // ── PHASE 2: SCATTER HOLD (keys tumble freely via useFrame) ──────────
-      const HOLD_START = 1.7
-      tl.to({}, { duration: 2.2 }, HOLD_START)   // 2.2s admire the chaos
+      const HOLD_START = 2.7
+      tl.to({}, { duration: 3.5 }, HOLD_START)   // 3.5s admire the chaos
 
       // ── PHASE 3: CONVERGENCE — slow reverse burst ─────────────────────────
-      const CONV_START = HOLD_START + 2.2
+      const CONV_START = HOLD_START + 3.5
       tl.call(() => { phaseRef.current = 'converge' }, null, CONV_START)
 
       keycaps.forEach((mesh) => {
-        // Random stagger so they don't all arrive together (0 to 0.55s offset)
-        const staggerT = CONV_START + Math.random() * 0.55
+        // Random stagger so they don't all arrive together (0 to 0.7s offset)
+        const staggerT = CONV_START + Math.random() * 0.70
         tl.to(mesh.position, {
           x: mesh.userData.origPos.x,
           y: mesh.userData.origPos.y,
           z: mesh.userData.origPos.z,
-          duration: 2.0,          // slow — 2× longer than original
-          ease: 'power2.inOut',   // ease in gently, settle gracefully
+          duration: 3.2,
+          ease: 'power2.inOut',
         }, staggerT)
         tl.to(mesh.rotation, {
           x: mesh.userData.origRot.x,
           y: mesh.userData.origRot.y,
           z: mesh.userData.origRot.z,
-          duration: 2.0,
+          duration: 3.2,
           ease: 'power2.inOut',
         }, staggerT)
         // Emissive fades as each key lands
-        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.40 }, staggerT + 1.65)
+        tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.50 }, staggerT + 2.75)
       })
 
       // ── PHASE 4: HOLD ASSEMBLED ───────────────────────────────────────────
-      const ASSEMBLE_END = CONV_START + 0.55 + 2.0 + 0.20
+      const ASSEMBLE_END = CONV_START + 0.70 + 3.2 + 0.20
       tl.call(() => { phaseRef.current = 'hold' }, null, ASSEMBLE_END)
-      tl.to({}, { duration: 2.0 }, ASSEMBLE_END)
+      tl.to({}, { duration: 4.0 }, ASSEMBLE_END)
     }
 
     buildCycle()

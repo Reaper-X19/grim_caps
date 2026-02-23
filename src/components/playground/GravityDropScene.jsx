@@ -17,9 +17,9 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 
-const STAGGER    = 0.022     // more spread out = each key trackable
+const STAGGER    = 0.038     // more spread out = each key trackable
 const DROP_HEIGHT = 0.80     // local (×17 = 13.6 world — taller fall)
-const CYCLE_DURATION = 87 * 0.022 + 0.70 + 4.5 + 87 * (0.022 * 0.4) + 1.5
+const CYCLE_DURATION = 87 * 0.038 + 1.20 + 7.5 + 87 * (0.038 * 0.4) + 2.0
 
 function CameraRig() {
   useFrame(({ camera, clock }) => {
@@ -101,22 +101,22 @@ export default function GravityDropScene() {
       shuffled.forEach((mesh, i) => {
         const t = i * STAGGER
         // Fade in immediately
-        tl.to(mesh.material, { opacity: 1, duration: 0.06 }, t)
+        tl.to(mesh.material, { opacity: 1, duration: 0.08 }, t)
         // Fall with bounce
-        tl.to(mesh.position,  { y: mesh.userData.origY, duration: 0.70, ease: 'bounce.out' }, t)
-        tl.to(mesh.rotation, { y: mesh.userData.origRotY, duration: 0.70, ease: 'power3.out' }, t)
-        tl.to(mesh.material, { emissiveIntensity: 0.55, duration: 0.04 }, t + 0.64)
-        tl.to(mesh.material, { emissiveIntensity: 0,    duration: 0.65 }, t + 0.68)
+        tl.to(mesh.position,  { y: mesh.userData.origY, duration: 1.20, ease: 'bounce.out' }, t)
+        tl.to(mesh.rotation, { y: mesh.userData.origRotY, duration: 1.20, ease: 'power3.out' }, t)
+        tl.to(mesh.material, { emissiveIntensity: 0.55, duration: 0.05 }, t + 1.12)
+        tl.to(mesh.material, { emissiveIntensity: 0,    duration: 1.10 }, t + 1.17)
       })
 
-      tl.to({}, { duration: 4.5 })   // hold assembled — 4.5s to appreciate the board
+      tl.to({}, { duration: 7.5 })   // hold assembled
 
       // Fade out / float back up for reset
       const fallEnd = shuffled.length * STAGGER + 0.6
       shuffled.forEach((mesh, i) => {
         const t2 = fallEnd + 1.8 + i * (STAGGER * 0.4)
-        tl.to(mesh.position, { y: mesh.userData.origY + DROP_HEIGHT, duration: 0.40, ease: 'power2.in' }, t2)
-        tl.to(mesh.material, { opacity: 0, duration: 0.22 }, t2 + 0.10)
+        tl.to(mesh.position, { y: mesh.userData.origY + DROP_HEIGHT, duration: 0.65, ease: 'power2.in' }, t2)
+        tl.to(mesh.material, { opacity: 0, duration: 0.32 }, t2 + 0.15)
       })
       tlRef.current = tl
     }

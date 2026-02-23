@@ -20,10 +20,10 @@ import ClonedKeyboard from './ClonedKeyboard'
 import { KEYBOARD_ROWS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
 const LIFT      = 0.07    // local (×17 = 1.19 world — VISIBLE!)
-const RISE_DUR  = 0.38
-const FALL_DUR  = 0.60    // slower fall = physical weight
-const ROW_DELAY = 0.10    // seconds between adjacent rows expanding
-const HOLD      = 2.0
+const RISE_DUR  = 0.65    // was 0.38
+const FALL_DUR  = 1.00    // was 0.60
+const ROW_DELAY = 0.17    // was 0.10
+const HOLD      = 4.0     // was 2.0
 
 const PEAK_COLOR = new THREE.Color('#ffcc44')
 const REST_COLOR = new THREE.Color('#334466')

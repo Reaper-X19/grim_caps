@@ -36,14 +36,14 @@ const LAYER_DEFS = [
   { id: 'weight',      delta: -SPREAD * 3,   color: '#b87333', matchMesh:  n => n === 'Weight' },
 ]
 
-// Explode: outermost first
+// Explode: outermost first (slower — each layer clearly readable)
 const EXPLODE_STEPS = [
-  { ids: ['keycaps', 'weight'],          t: 0.00, dur: 0.70 },
-  { ids: ['switches', 'topcase'],        t: 0.14, dur: 0.60 },
-  { ids: ['bottomcase'],                 t: 0.24, dur: 0.58 },
-  { ids: ['pcb'],                        t: 0.32, dur: 0.55 },
-  { ids: ['plate'],                      t: 0.40, dur: 0.52 },
-  { ids: ['emission'],                   t: 0.47, dur: 0.50 },
+  { ids: ['keycaps', 'weight'],          t: 0.00, dur: 1.20 },
+  { ids: ['switches', 'topcase'],        t: 0.24, dur: 1.02 },
+  { ids: ['bottomcase'],                 t: 0.41, dur: 0.99 },
+  { ids: ['pcb'],                        t: 0.54, dur: 0.94 },
+  { ids: ['plate'],                      t: 0.68, dur: 0.88 },
+  { ids: ['emission'],                   t: 0.80, dur: 0.85 },
 ]
 
 // Reassemble: inner fills first
@@ -54,8 +54,8 @@ const REASSEMBLE_STEPS = [
   ['bottomcase'],   // bottom case last before switches
   ['switches'],
 ]
-const STEP_DELAY = 0.38
-const COL_DELAY  = 0.032
+const STEP_DELAY = 0.65    // was 0.38
+const COL_DELAY  = 0.055   // was 0.032
 
 // Assembled vs exploded rotation targets
 const ROT_ASSEMBLED = { x: 0.40, y: 0.10 }
@@ -197,7 +197,7 @@ export default function LiquidChromeScene() {
       // ── PHASE 2: HOLD ─────────────────────────────────────────────────
       const holdStart = 0.85
       tl.call(() => { phaseRef.current = 'exploded' }, null, holdStart)
-      tl.to({}, { duration: 2.8 }, holdStart)
+      tl.to({}, { duration: 4.5 }, holdStart)
 
       // ── PHASE 3: REASSEMBLE ───────────────────────────────────────────
       const rStart = holdStart + 2.8
@@ -207,8 +207,8 @@ export default function LiquidChromeScene() {
         const st = rStart + si * STEP_DELAY
         stepIds.forEach(id => {
           layerObjs[layerIdx[id]].forEach(obj => {
-            tl.to(obj.position, { y: obj.userData.origY, duration: 0.42, ease: 'expo.out' }, st)
-            killGlow(tl, obj, st + 0.38, 0.28)
+            tl.to(obj.position, { y: obj.userData.origY, duration: 0.70, ease: 'expo.out' }, st)
+            killGlow(tl, obj, st + 0.65, 0.35)
           })
         })
       })
@@ -259,7 +259,7 @@ export default function LiquidChromeScene() {
         })
         phaseRef.current = 'hold'
       }, null, waveEnd)
-      tl.to({}, { duration: 2.0 }, waveEnd)
+      tl.to({}, { duration: 4.0 }, waveEnd)
     }
 
     buildCycle()

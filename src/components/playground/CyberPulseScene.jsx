@@ -20,10 +20,10 @@ import ClonedKeyboard from './ClonedKeyboard'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
 const LIFT         = 0.08    // local Y (×17 = 1.36 world — VISIBLE!)
-const LIFT_DUR     = 0.32    // snappy rise
-const FALL_DUR     = 0.50    // deliberate return (asymmetric feel)
-const COLUMN_DELAY = 0.035   // tight = wave looks fast
-const HOLD_AFTER   = 0.8     // gap between waves
+const LIFT_DUR     = 0.55    // was 0.32
+const FALL_DUR     = 0.85    // was 0.50
+const COLUMN_DELAY = 0.058   // was 0.035
+const HOLD_AFTER   = 2.0     // was 0.8
 
 const ACCENT_COLORS = [
   new THREE.Color('#00ffcc'),
