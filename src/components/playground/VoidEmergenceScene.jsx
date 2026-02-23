@@ -124,7 +124,7 @@ export default function ShatterScene() {
         const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
         nx /= len; ny /= len; nz /= len
 
-        const dist = 0.32 + Math.random() * 0.33    // 0.32–0.65 local → 5.4–11 world
+        const dist = 0.18 + Math.random() * 0.20    // 0.18–0.38 local → 3.1–6.5 world — explosive but contained
         const ox   = mesh.userData.origPos
 
         tl.to(mesh.position, {

@@ -17,8 +17,8 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import ClonedKeyboard from './ClonedKeyboard'
 
-const STAGGER    = 0.038     // more spread out = each key trackable
-const DROP_HEIGHT = 0.80     // local (×17 = 13.6 world — taller fall)
+const STAGGER    = 0.032     // spread per key
+const DROP_HEIGHT = 0.45     // local (×17 = 7.65 world — full travel but stays in frame)
 const CYCLE_DURATION = 87 * 0.038 + 1.20 + 7.5 + 87 * (0.038 * 0.4) + 2.0
 
 function CameraRig() {

@@ -22,7 +22,7 @@ import gsap                   from 'gsap'
 import ClonedKeyboard         from './ClonedKeyboard'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-const SPREAD = 0.055
+const SPREAD = 0.038
 
 const LAYER_DEFS = [
   { id: 'keycaps',      delta: +SPREAD * 3,   color: '#c8d8ff', matchMesh:  n => n.startsWith('K_') || n === 'Knob' || n === 'Screen' },

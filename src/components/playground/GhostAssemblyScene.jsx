@@ -22,7 +22,7 @@ import gsap                   from 'gsap'
 import ClonedKeyboard         from './ClonedKeyboard'
 import { KEYBOARD_COLUMNS, buildMeshMap, resolveLayout } from './keyboardLayout'
 
-const DROP_HEIGHT  = 1.20    // local (×17 = 20.4 world — dramatic sky-fall)
+const DROP_HEIGHT  = 0.55    // local (×17 = 9.35 world — visible but stays in frame)
 const FALL_DUR     = 1.35    // was 0.80
 const COL_STAGGER  = 0.185   // was 0.110
 const ROW_STAGGER  = 0.030   // was 0.018
