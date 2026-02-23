@@ -15,13 +15,13 @@ export default function KeyboardModel() {
   const { camera, raycaster, pointer, gl } = useThree()
 
   const { posX, posY, posZ, rotX, rotY, rotZ, kbScale } = useControls('Keyboard', {
-    posX:    { value: 0,     min: -5,    max: 5,    step: 0.01 },
-    posY:    { value: -0.5,  min: -5,    max: 5,    step: 0.01 },
-    posZ:    { value: 0,     min: -5,    max: 5,    step: 0.01 },
-    rotX:    { value: -0.75, min: -1.57, max: 1.57, step: 0.01 },
-    rotY:    { value: 0.30,  min: -1.57, max: 1.57, step: 0.01 },
-    rotZ:    { value: 0,     min: -1.57, max: 1.57, step: 0.01 },
-    kbScale: { value: 26,    min: 1,     max: 40,   step: 0.5  },
+    posX:    { value: 0,      min: -5,    max: 5,    step: 0.001 },
+    posY:    { value: 0.61,   min: -5,    max: 5,    step: 0.001 },
+    posZ:    { value: -2.5,   min: -5,    max: 5,    step: 0.001 },
+    rotX:    { value: 0.30,   min: -1.57, max: 1.57, step: 0.001 },
+    rotY:    { value: 0.01,   min: -1.57, max: 1.57, step: 0.001 },
+    rotZ:    { value: 0,      min: -1.57, max: 1.57, step: 0.001 },
+    kbScale: { value: 30.5,   min: 1,     max: 50,   step: 0.1   },
   })
 
 
@@ -305,7 +305,7 @@ export default function KeyboardModel() {
     <group
       ref={groupRef}
       scale={kbScale}
-      position={[posX, posY, posZ]}
+      position={[posX, posZ, posY]}
       rotation={[rotX, rotY, rotZ]}
     >
       <KeyboardGLTF />

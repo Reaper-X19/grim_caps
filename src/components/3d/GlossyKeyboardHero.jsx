@@ -1,33 +1,44 @@
 /**
- * GlossyKeyboardHero — v6  (Spin-in-Place)
- *
- * ROOT CAUSE FIX:
- *   spinRef was OUTSIDE the position group, so rotation pivoted around
- *   world-origin (0,0,0) while keyboard was at posZ=2.7, posX=0.2.
- *   That made the keyboard ORBIT the origin — not spin in place.
- *
- *   Fix: position group is now the OUTERMOST wrapper under intro/float.
- *   spinRef sits INSIDE the position group — rotation.y pivots around
- *   the keyboard's own centre point. Clean, stable spin-in-place.
+ * GlossyKeyboardHero — v8  (Gravity Drop Reveal + Mouse Parallax)
  *
  * ANIMATION:
- *   1. Keyboard starts facing camera (Y=0)
- *   2. ONE full 360° GSAP spin: 0 → 2π, power3.inOut, 2.0s — smooth reveal
- *   3. Spin ends back at Y=0 (front-facing) — reset to exactly 0
- *   4. Idle: very slow continuous rotation 0.06 rad/s (~105s/rev)
- *      Reads as "rotating by itself" — not oscillation, not obvious spinning
+ *   1. Keyboard starts ABOVE viewport: y=+4.5, tilted back (rotZ=0.6),
+ *      slightly scaled down (0.7×), with subtle X-tilt offset.
+ *   2. Phase 1 — GRAVITY DROP (0.8s, power2.in):
+ *      Falls from above with accelerating speed (realistic gravity feel).
+ *   3. Phase 2 — ELASTIC SETTLE (1.2s, elastic.out):
+ *      Overshoots final Y slightly, then bounces to rest.
+ *      Rotation and scale ease to final Leva values simultaneously.
+ *   4. Phase 3 — GLOW PULSE (0.6s):
+ *      Brief emission intensity spike on landing for visual impact.
+ *   5. After: ultra-subtle mouse parallax (±0.024 rad range, 0.032 lag).
+ *      No idle rotation, no breathing — keyboard responds only to mouse.
+ *
+ * STRUCTURE (flat — no nested wrapper conflicts):
+ *   introRef   → position.y drop + rotation.z tilt
+ *     posGroup → Leva position [posX, posY, posZ]
+ *       modelRef → quaternion written by useFrame (Leva base + mouse parallax)
+ *         <KeyboardGlossyModel />
  */
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
 import { useControls } from 'leva'
 import gsap from 'gsap'
 import { KeyboardGlossyModel } from './Keyboard_Glossy'
 
-// ─── Camera rig (extremely subtle drift, doesn't distract from spin) ──────────
+// Reusable objects (zero GC per frame)
+const _qBase   = new THREE.Quaternion()
+const _qMouseX = new THREE.Quaternion()
+const _qMouseY = new THREE.Quaternion()
+const _euler   = new THREE.Euler()
+const _axisX   = new THREE.Vector3(1, 0, 0)
+const _axisY   = new THREE.Vector3(0, 1, 0)
+
+// ─── Camera rig ───────────────────────────────────────────────────────────────
 export function HeroCameraRig({ mouse }) {
   useFrame(({ camera }) => {
-    const tx = (mouse?.current?.x ?? 0) * 0.08   // reduced — camera stays still
+    const tx = (mouse?.current?.x ?? 0) * 0.08
     const ty = (mouse?.current?.y ?? 0) * 0.04 + 0.05
     camera.position.x += (tx - camera.position.x) * 0.030
     camera.position.y += (ty - camera.position.y) * 0.030
@@ -38,14 +49,17 @@ export function HeroCameraRig({ mouse }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function GlossyKeyboardHero({ mouse }) {
-  const modelRef     = useRef()     // the actual keyboard group (rotation/scale)
-  const spinRef      = useRef()     // Y-spin — pivots around keyboard centre
-  const introRef     = useRef()     // GSAP intro: position.y rise + squash
-  const floatRef     = useRef()     // useFrame: breathing Y only
+  const modelRef   = useRef()   // keyboard group — quaternion via useFrame
+  const introRef   = useRef()   // outer group — GSAP animates position/rotation/scale
+  const readyRef   = useRef(false)
+  const [landed, setLanded] = useState(false)
 
-  const readyRef     = useRef(false)
-  const idleRef      = useRef(false)  // true once intro spin completes
-  const mouseRotX    = useRef(0)
+  // Mouse parallax smoothed values
+  const mouseX = useRef(0)
+  const mouseY = useRef(0)
+
+  // Glow pulse ref — multiplied into emission during landing
+  const glowMult = useRef(1.0)
 
   const {
     posX, posY, posZ,
@@ -54,124 +68,166 @@ export default function GlossyKeyboardHero({ mouse }) {
     emissionColor, emissionIntensity, keycapEmissionIntensity,
     metalness, roughness,
   } = useControls('Glossy Keyboard', {
-    posX: { value: 0.2,  min: -10, max: 10, step: 0.1 },
-    posY: { value: -0.0, min: -10, max: 10, step: 0.1 },
-    posZ: { value: 2.7,  min: -10, max: 10, step: 0.1 },
-    rotX: { value: 1.10, min: -Math.PI, max: Math.PI, step: 0.01 },
-    rotY: { value: 0.40, min: -Math.PI, max: Math.PI, step: 0.01 },
-    rotZ: { value: 0.17, min: -Math.PI, max: Math.PI, step: 0.01 },
-    scale: { value: 3.5, min: 0.1, max: 6, step: 0.1 },
+    posX:  { value: 0.2,  min: -10, max: 10, step: 0.1 },
+    posY:  { value: -0.0, min: -10, max: 10, step: 0.1 },
+    posZ:  { value: 2.7,  min: -10, max: 10, step: 0.1 },
+    rotX:  { value: 1.10, min: -Math.PI, max: Math.PI, step: 0.01 },
+    rotY:  { value: 0.40, min: -Math.PI, max: Math.PI, step: 0.01 },
+    rotZ:  { value: 0.17, min: -Math.PI, max: Math.PI, step: 0.01 },
+    scale: { value: 3.5,  min: 0.1, max: 6, step: 0.1 },
     emissionColor:          { value: '#00ffcc' },
-    emissionIntensity:      { value: 0.5,  min: 0, max: 10, step: 0.1 },
-    keycapEmissionIntensity:{ value: 0.10, min: 0, max: 5,  step: 0.05 },
+    emissionIntensity:      { value: 0.5,  min: 0, max: 10,  step: 0.1 },
+    keycapEmissionIntensity:{ value: 0.10, min: 0, max: 5,   step: 0.05 },
     metalness: { value: 0.30, min: 0, max: 1, step: 0.05 },
-    roughness:  { value: 0.30, min: 0, max: 1, step: 0.05 },
+    roughness: { value: 0.30, min: 0, max: 1, step: 0.05 },
   })
 
-  // Materials + intro GSAP
+  // ─── Materials + GSAP intro ──────────────────────────────────────────────────
   useEffect(() => {
     if (!modelRef.current) return
+
     const emissiveColor = new THREE.Color(emissionColor)
+
+    // Material application (runs on every dep change for Leva reactivity)
+    const currentGlow = glowMult.current
     modelRef.current.traverse(child => {
       if (!child.isMesh) return
       if (child.name === 'Knob' || child.name === 'knob') {
         child.material = new THREE.MeshStandardMaterial({
           color: child.material.color || new THREE.Color(0xCCCCCC),
-          emissive: emissiveColor, emissiveIntensity: 0.1, metalness, roughness,
+          emissive: emissiveColor, emissiveIntensity: 0.1 * currentGlow,
+          metalness, roughness,
         })
       } else if (child.name.toLowerCase().includes('emission')) {
         child.material = new THREE.MeshStandardMaterial({
           color: emissiveColor, emissive: emissiveColor,
-          emissiveIntensity: emissionIntensity, metalness: 0, roughness: 0.1, toneMapped: false,
+          emissiveIntensity: emissionIntensity * currentGlow,
+          metalness: 0, roughness: 0.1, toneMapped: false,
         })
       } else if (child.name.startsWith('K_')) {
         child.material = new THREE.MeshStandardMaterial({
           color: child.material.color || new THREE.Color(0x333333),
-          emissive: emissiveColor, emissiveIntensity: keycapEmissionIntensity, metalness, roughness,
+          emissive: emissiveColor,
+          emissiveIntensity: keycapEmissionIntensity * currentGlow,
+          metalness, roughness,
         })
       } else {
         child.material = new THREE.MeshStandardMaterial({
-          color: child.material.color || new THREE.Color(0x1A1A1A), metalness, roughness,
+          color: child.material.color || new THREE.Color(0x1A1A1A),
+          metalness, roughness,
         })
       }
       child.material.needsUpdate = true
     })
 
-    if (!readyRef.current && introRef.current && spinRef.current) {
+    // ── GSAP intro — runs once ───────────────────────────────────────────────
+    if (!readyRef.current && introRef.current) {
       readyRef.current = true
+      const g = introRef.current
 
-      // Starting pose
-      introRef.current.position.y = -3.2
-      introRef.current.rotation.z = -0.12
-      introRef.current.scale.set(1, 1, 1)
-      spinRef.current.rotation.y  = 0   // starts facing camera
+      // ── Starting pose: above viewport, tilted back, smaller ────────────
+      g.position.set(0, 4.5, 0)       // way above final pos
+      g.rotation.set(0.3, 0, 0.6)     // tilted back + sideways
+      g.scale.setScalar(0.7)           // 70% scale — grows on landing
 
       const tl = gsap.timeline()
 
-      // ── Rise to center ──────────────────────────────────────────────────
-      tl.to(introRef.current.position, { y: 0, duration: 1.3, ease: 'power3.out' }, 0.4)
-      tl.to(introRef.current.rotation, { z: 0, duration: 1.3, ease: 'power3.out' }, 0.4)
+      // ── Phase 1: Gravity drop — accelerating fall ──────────────────────
+      // Y drops from 4.5 → -0.3 (slight overshoot below final 0)
+      tl.to(g.position, {
+        y: -0.3,
+        duration: 0.9,
+        ease: 'power2.in', // accelerating — feels like gravity
+      }, 0.3) // 0.3s delay so keyboard is visible before falling
 
-      // ── Full 360° spin IN PLACE (starts once keyboard is near centre) ──
-      tl.to(spinRef.current.rotation, {
-        y: Math.PI * 2,
-        duration: 2.2,
-        ease: 'power3.inOut',
-      }, 1.4)
+      // Rotation starts unwinding during fall
+      tl.to(g.rotation, {
+        x: 0, z: 0.08, // almost settled but not quite
+        duration: 0.9,
+        ease: 'power2.in',
+      }, 0.3)
 
-      // ── Landing thud ──────────────────────────────────────────────────
-      tl.to(introRef.current.position, { y: -0.08, duration: 0.10, ease: 'power3.in'  }, 3.40)
-      tl.to(introRef.current.position, { y: 0,     duration: 0.50, ease: 'elastic.out(1, 0.40)' }, 3.50)
-      tl.to(introRef.current.scale, { x: 1.018, y: 0.965, z: 1.018, duration: 0.10, ease: 'power3.in' }, 3.40)
-      tl.to(introRef.current.scale, { x: 1,     y: 1,     z: 1,     duration: 0.42, ease: 'elastic.out(1, 0.5)' }, 3.50)
+      // ── Phase 2: Elastic bounce — overshoots and settles ───────────────
+      tl.to(g.position, {
+        y: 0,
+        duration: 1.4,
+        ease: 'elastic.out(1.0, 0.35)',
+      }, 1.2)
 
-      // ── Handoff to idle ───────────────────────────────────────────────
-      tl.call(() => {
-        if (spinRef.current) spinRef.current.rotation.y = 0
-        idleRef.current = true
-      }, null, 4.05)
+      // Rotation finishes settling
+      tl.to(g.rotation, {
+        x: 0, y: 0, z: 0,
+        duration: 1.2,
+        ease: 'power3.out',
+      }, 1.2)
+
+      // Scale snaps to full
+      tl.to(g.scale, {
+        x: 1, y: 1, z: 1,
+        duration: 1.0,
+        ease: 'back.out(1.4)', // slight overshoot for punch
+      }, 1.0)
+
+      // ── Phase 3: Glow pulse on landing ─────────────────────────────────
+      // Emission spikes briefly on impact
+      tl.to(glowMult, {
+        current: 3.0,
+        duration: 0.15,
+        ease: 'power2.in',
+      }, 1.15)
+      tl.to(glowMult, {
+        current: 1.0,
+        duration: 0.8,
+        ease: 'power3.out',
+      }, 1.30)
+
+      // ── Mark landed — enables mouse parallax ───────────────────────────
+      tl.call(() => setLanded(true), null, 2.6)
     }
   }, [emissionColor, emissionIntensity, keycapEmissionIntensity, metalness, roughness])
 
-  useFrame(({ clock }) => {
-    // ── Idle rotation: slow self-spin (0.06 rad/s ≈ one rev per 105s) ────
-    if (spinRef.current && idleRef.current) {
-      spinRef.current.rotation.y += 0.06 * (1 / 60)   // add per-frame increment (≈60fps assumed)
-    }
+  // ─── Per-frame: Leva base rotation + mouse parallax ──────────────────────────
+  useFrame(() => {
+    if (!modelRef.current) return
 
-    // ── Mouse X-tilt (separate ref, no conflict with Y-spin) ─────────────
-    if (modelRef.current) {
+    // 1. Base quaternion from Leva
+    _euler.set(rotX, rotY, rotZ, 'XYZ')
+    _qBase.setFromEuler(_euler)
+
+    // 2. Mouse parallax (only after landing)
+    if (landed) {
+      const mx = mouse?.current?.x ?? 0
       const my = mouse?.current?.y ?? 0
-      mouseRotX.current += (my * -0.030 - mouseRotX.current) * 0.05
-      // Apply additional X-tilt on top of the base rotX from Leva
-      // We don't have a separate mouseWrapRef here — apply directly to spinRef parent
+      mouseX.current += (my * -0.024 - mouseX.current) * 0.032
+      mouseY.current += (mx *  0.018 - mouseY.current) * 0.032
+
+      _qMouseX.setFromAxisAngle(_axisX, mouseX.current)
+      _qMouseY.setFromAxisAngle(_axisY, mouseY.current)
+      _qBase.multiply(_qMouseX).multiply(_qMouseY)
     }
 
-    // ── Breathing float (floatRef) ────────────────────────────────────────
-    if (floatRef.current && idleRef.current) {
-      const breathe = Math.sin(clock.elapsedTime * 0.55) * 0.038
-      floatRef.current.position.y += (breathe - floatRef.current.position.y) * 0.045
+    // 3. Apply
+    modelRef.current.quaternion.copy(_qBase)
+
+    // 4. Update emission glow if pulse is active
+    if (glowMult.current !== 1.0 && modelRef.current) {
+      const emissiveColor = new THREE.Color(emissionColor)
+      modelRef.current.traverse(child => {
+        if (!child.isMesh) return
+        if (child.name.toLowerCase().includes('emission')) {
+          child.material.emissiveIntensity = emissionIntensity * glowMult.current
+        } else if (child.name.startsWith('K_')) {
+          child.material.emissiveIntensity = keycapEmissionIntensity * glowMult.current
+        }
+      })
     }
   })
 
   return (
-    <group ref={floatRef}>
-      <group ref={introRef}>
-        {/*
-          positionGroup puts the keyboard at its intended location (posX, posY, posZ).
-          spinRef INSIDE this group → rotation.y pivots around the keyboard's
-          own world-space centre → TRUE spin-in-place, no orbiting.
-        */}
-        <group position={[posX, posY, posZ]}>
-          <group ref={spinRef}>
-            <group
-              ref={modelRef}
-              rotation={[rotX, rotY, rotZ]}
-              scale={scale}
-            >
-              <KeyboardGlossyModel />
-            </group>
-          </group>
+    <group ref={introRef}>
+      <group position={[posX, posY, posZ]}>
+        <group ref={modelRef} scale={scale}>
+          <KeyboardGlossyModel />
         </group>
       </group>
     </group>
