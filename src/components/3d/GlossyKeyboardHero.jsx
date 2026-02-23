@@ -109,27 +109,27 @@ export default function GlossyKeyboardHero({ mouse }) {
       const tl = gsap.timeline()
 
       // ── Rise to center ──────────────────────────────────────────────────
-      tl.to(introRef.current.position, { y: 0, duration: 0.9, ease: 'power3.out' }, 0)
-      tl.to(introRef.current.rotation, { z: 0, duration: 0.9, ease: 'power3.out' }, 0)
+      tl.to(introRef.current.position, { y: 0, duration: 1.3, ease: 'power3.out' }, 0.4)
+      tl.to(introRef.current.rotation, { z: 0, duration: 1.3, ease: 'power3.out' }, 0.4)
 
       // ── Full 360° spin IN PLACE (starts once keyboard is near centre) ──
       tl.to(spinRef.current.rotation, {
-        y: Math.PI * 2,     // exactly one revolution → lands at 0 (facing camera)
-        duration: 2.0,
-        ease: 'power3.inOut',   // eases in (slow reveal), peaks at back, eases out (lands gently)
-      }, 0.75)              // slight delay so rise is nearly done before spin starts
+        y: Math.PI * 2,
+        duration: 2.2,
+        ease: 'power3.inOut',
+      }, 1.4)
 
-      // ── Landing thud (introRef — position + scale) ──────────────────────
-      tl.to(introRef.current.position, { y: -0.08, duration: 0.10, ease: 'power3.in'  }, 2.60)
-      tl.to(introRef.current.position, { y: 0,     duration: 0.50, ease: 'elastic.out(1, 0.40)' }, 2.70)
-      tl.to(introRef.current.scale, { x: 1.018, y: 0.965, z: 1.018, duration: 0.10, ease: 'power3.in' }, 2.60)
-      tl.to(introRef.current.scale, { x: 1,     y: 1,     z: 1,     duration: 0.42, ease: 'elastic.out(1, 0.5)' }, 2.70)
+      // ── Landing thud ──────────────────────────────────────────────────
+      tl.to(introRef.current.position, { y: -0.08, duration: 0.10, ease: 'power3.in'  }, 3.40)
+      tl.to(introRef.current.position, { y: 0,     duration: 0.50, ease: 'elastic.out(1, 0.40)' }, 3.50)
+      tl.to(introRef.current.scale, { x: 1.018, y: 0.965, z: 1.018, duration: 0.10, ease: 'power3.in' }, 3.40)
+      tl.to(introRef.current.scale, { x: 1,     y: 1,     z: 1,     duration: 0.42, ease: 'elastic.out(1, 0.5)' }, 3.50)
 
-      // ── Handoff to idle rotation ────────────────────────────────────────
+      // ── Handoff to idle ───────────────────────────────────────────────
       tl.call(() => {
-        if (spinRef.current) spinRef.current.rotation.y = 0  // clean reset to front-facing
+        if (spinRef.current) spinRef.current.rotation.y = 0
         idleRef.current = true
-      }, null, 3.25)
+      }, null, 4.05)
     }
   }, [emissionColor, emissionIntensity, keycapEmissionIntensity, metalness, roughness])
 
