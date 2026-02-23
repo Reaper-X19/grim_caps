@@ -97,8 +97,8 @@ export default function ResonanceScene() {
           const dir = rowIdx % 2 === 0 ? 1 : -1
 
           // Wave acceleration: outer rows move FASTER (gains momentum = physical wave)
-          // pairIdx: 0=centre, 1=next, 2=outer → speed factor 1.0, 0.82, 0.65
-          const speedFactor = Math.max(0.65, 1.0 - pairIdx * 0.18)
+          // step: 0=centre, 1=next, 2=outer → speed factor 1.0, 0.82, 0.65
+          const speedFactor = Math.max(0.65, 1.0 - step * 0.18)
           const riseDur  = RISE_DUR * speedFactor
           const fallDur  = FALL_DUR * speedFactor
 
