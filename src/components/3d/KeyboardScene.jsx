@@ -50,9 +50,9 @@ function IntroCamera({ onComplete }) {
     const progress = t / 3.0
     const ease = 1 - Math.pow(1 - progress, 3)
 
-    // Camera path: z: 22→2.8,  y: 2→3.8
+    // Camera path: z: 22→2.8,  y: 2→4.6
     const targetZ = 22 + (2.8 - 22) * ease
-    const targetY =  2 + (3.8 -  2) * ease
+    const targetY =  2 + (4.6 -  2) * ease
 
     camera.position.z = targetZ
     camera.position.y = targetY
