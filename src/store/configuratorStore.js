@@ -40,8 +40,15 @@ const useConfiguratorStore = create((set, get) => ({
 
   // Actions
   addLayer: () => set((state) => {
+    // Prevent adding a new layer if the active layer has no keys applied
+    const activeLayerKeys = Object.values(state.keyCustomizations).filter(c => c.layerId === state.activeLayerId)
+    if (activeLayerKeys.length === 0 && state.layers.length > 0) {
+      return { ...state, selectionConflict: 'Please apply selection to the current layer before adding a new one.' }
+    }
+
     const newId = `layer-${Date.now()}`
     return {
+      selectionConflict: null,
       layers: [
         ...state.layers,
         {
@@ -83,7 +90,8 @@ const useConfiguratorStore = create((set, get) => ({
     return {
       layers: newLayers,
       activeLayerId: state.activeLayerId === id ? newLayers[0].id : state.activeLayerId,
-      keyCustomizations: newCustomizations
+      keyCustomizations: newCustomizations,
+      selectionConflict: null
     }
   }),
 
@@ -93,7 +101,7 @@ const useConfiguratorStore = create((set, get) => ({
     )
   })),
 
-  setActiveLayer: (id) => set({ activeLayerId: id }),
+  setActiveLayer: (id) => set({ activeLayerId: id, selectionConflict: null }),
 
   selectKeys: (layerId, keys) => set((state) => ({
     layers: state.layers.map(layer =>
@@ -206,24 +214,62 @@ const useConfiguratorStore = create((set, get) => ({
     )
   })),
 
-  // Key selection actions
-  setSelectedKeys: (keys) => set({ selectedKeys: keys }),
+  // UI feedback state for selection errors
+  selectionConflict: null,
+  clearSelectionConflict: () => set({ selectionConflict: null }),
+
+  // Key selection actions - ENFORCING UNIQUENESS ACROSS LAYERS
+  setSelectedKeys: (keys) => set((state) => {
+    // Filter out keys that belong to OTHER layers
+    const validKeys = []
+    const conflictKeys = []
+    
+    keys.forEach(key => {
+      const existing = state.keyCustomizations[key]
+      if (existing && existing.layerId !== state.activeLayerId) {
+        conflictKeys.push(key)
+      } else {
+        validKeys.push(key)
+      }
+    })
+
+    return {
+      selectedKeys: validKeys,
+      selectionConflict: conflictKeys.length > 0 ? 'Some keys were skipped because they are already used in another layer.' : null
+    }
+  }),
 
   toggleKeySelection: (keyName) => set((state) => {
+    // Check for cross-layer conflict
+    const existing = state.keyCustomizations[keyName]
+    if (existing && existing.layerId !== state.activeLayerId) {
+      return { selectionConflict: `Key ${keyName} is already used in another layer.` }
+    }
+
     const isSelected = state.selectedKeys.includes(keyName)
     return {
       selectedKeys: isSelected
         ? state.selectedKeys.filter(k => k !== keyName)
-        : [...state.selectedKeys, keyName]
+        : [...state.selectedKeys, keyName],
+      selectionConflict: null // Clear conflict on success
     }
   }),
 
   addToSelection: (keyName) => set((state) => {
+    // Check for cross-layer conflict
+    const existing = state.keyCustomizations[keyName]
+    if (existing && existing.layerId !== state.activeLayerId) {
+      return { selectionConflict: `Key ${keyName} is already used in another layer.` }
+    }
+
     if (state.selectedKeys.includes(keyName)) return state
-    return { selectedKeys: [...state.selectedKeys, keyName] }
+    return { 
+      selectedKeys: [...state.selectedKeys, keyName],
+      selectionConflict: null
+    }
   }),
 
-  clearSelection: () => set({ selectedKeys: [], selectionLocked: false, selectionMode: false }),
+  clearSelection: () => set({ selectedKeys: [], selectionLocked: false, selectionMode: false, selectionConflict: null }),
 
   // Selection mode actions
   setSelectionMode: (active) => set({ selectionMode: active }),
@@ -291,16 +337,27 @@ const useConfiguratorStore = create((set, get) => ({
     }
   }),
 
-  // Copy style from the first selected key
+  // Copy style from the first selected key or active layer
   copyStyle: () => set((state) => {
-    if (state.selectedKeys.length === 0) return state
+    // If we have selected keys, copy from the first one
+    if (state.selectedKeys.length > 0) {
+      const firstKey = state.selectedKeys[0]
+      const customization = state.keyCustomizations[firstKey]
+      
+      if (customization) {
+        return {
+          copiedStyle: {
+            textureUrl: customization.textureUrl,
+            baseColor: customization.baseColor,
+            textureTransform: { ...customization.textureTransform }
+          }
+        }
+      }
+    }
 
-    const firstKey = state.selectedKeys[0]
-    const customization = state.keyCustomizations[firstKey]
-
-    if (!customization) {
-      // Copy from active layer if key has no customization
-      const activeLayer = state.layers.find(l => l.id === state.activeLayerId)
+    // Otherwise, or if key has no customization, copy from the active layer
+    const activeLayer = state.layers.find(l => l.id === state.activeLayerId)
+    if (activeLayer) {
       return {
         copiedStyle: {
           textureUrl: activeLayer.textureUrl,
@@ -309,17 +366,11 @@ const useConfiguratorStore = create((set, get) => ({
         }
       }
     }
-
-    return {
-      copiedStyle: {
-        textureUrl: customization.textureUrl,
-        baseColor: customization.baseColor,
-        textureTransform: { ...customization.textureTransform }
-      }
-    }
+    
+    return state
   }),
 
-  // Paste copied style to selected keys
+  // Paste copied style to selected keys AND the active layer
   pasteStyle: () => set((state) => {
     if (!state.copiedStyle || state.selectedKeys.length === 0) return state
 
@@ -335,8 +386,7 @@ const useConfiguratorStore = create((set, get) => ({
     })
 
     if (conflicts.length > 0) {
-      console.warn('Cannot paste to keys already used in other sets:', conflicts)
-      return state
+      return { selectionConflict: 'Cannot paste to keys already used in other layers.' }
     }
 
     // Create new keyGroup from current selection for correct bounding box
@@ -346,16 +396,34 @@ const useConfiguratorStore = create((set, get) => ({
     state.selectedKeys.forEach(keyName => {
       newCustomizations[keyName] = {
         layerId: state.activeLayerId,
-        ...state.copiedStyle,
+        textureUrl: state.copiedStyle.textureUrl,
+        baseColor: state.copiedStyle.baseColor,
+        textureTransform: { ...state.copiedStyle.textureTransform },
+        boundingBox: null, // Force recalculation
         keyGroup: selectedKeysList // CRITICAL: Use new selection as keyGroup
       }
     })
 
+    // UPDATE THE ACTIVE LAYER ITSELF so the Customizer UI shows the pasted style
+    const updatedLayers = state.layers.map(layer => 
+      layer.id === state.activeLayerId
+        ? {
+            ...layer,
+            textureUrl: state.copiedStyle.textureUrl,
+            baseColor: state.copiedStyle.baseColor,
+            textureTransform: { ...state.copiedStyle.textureTransform },
+            selectedKeys: selectedKeysList
+          }
+        : layer
+    )
+
     return {
+      layers: updatedLayers,
       keyCustomizations: newCustomizations,
       selectedKeys: [],
       selectionLocked: false, // Unlock after paste
-      selectionMode: false // Exit selection mode
+      selectionMode: false, // Exit selection mode
+      selectionConflict: null
     }
   }),
 
@@ -381,43 +449,91 @@ const useConfiguratorStore = create((set, get) => ({
 
   // Load a saved design into the configurator
   loadDesign: (designData) => {
-    set({
-      selectedKeys: designData.selected_keys || [],
-      layers: [
-        {
-          id: 'layer-1',
-          name: 'Set 1',
-          selectedKeys: designData.selected_keys || [],
-          texture: null,
-          textureUrl: designData.texture_url || null,
-          baseColor: designData.base_color || '#ffffff',
-          textureTransform: designData.texture_config || {
-            zoom: 1,
-            positionX: 0,
-            positionY: 0,
-            rotation: 0
-          },
-          boundingBox: (designData.texture_config?.boundsMin && designData.texture_config?.boundsMax) ? {
-            min: designData.texture_config.boundsMin,
-            max: designData.texture_config.boundsMax
-          } : null,
-          visible: true
-        }
-      ],
-      activeLayerId: 'layer-1',
-      keyCustomizations: {},
-      selectionLocked: false,
-      selectionMode: false,
-      // Track which design was loaded so Save can offer overwrite
-      loadedDesignId: designData.id || null,
-      loadedDesignMeta: designData.id ? {
-        title: designData.name || '',
-        description: designData.description || '',
-        category: designData.category || 'custom',
-        tags: designData.tags || [],
-        isPublic: designData.is_public || false
-      } : null
-    })
+    // Check if this is a newer multi-layer design
+    if (designData.texture_config?.multilayers) {
+      const multilayers = designData.texture_config.multilayers
+      set({
+        selectedKeys: [], // Usually empty when a saved design is first loaded
+        layers: multilayers.layers.map(layer => ({
+          ...layer,
+          texture: null, // We have a URL, but no local File object
+          // Restore bounding box from serialized JSON if present
+          boundingBox: layer.boundingBox ? {
+            min: layer.boundingBox.min,
+            max: layer.boundingBox.max
+          } : null
+        })),
+        activeLayerId: multilayers.layers[0]?.id || 'layer-1',
+        keyCustomizations: multilayers.keyCustomizations || {},
+        selectionLocked: false,
+        selectionMode: false,
+        selectionConflict: null,
+        
+        // Track which design was loaded
+        loadedDesignId: designData.id || null,
+        loadedDesignMeta: designData.id ? {
+          title: designData.name || '',
+          description: designData.description || '',
+          category: designData.category || 'custom',
+          tags: designData.tags || [],
+          isPublic: designData.is_public || false
+        } : null
+      })
+    } else {
+      // Legacy single-layer fallback
+      set({
+        selectedKeys: designData.selected_keys || [],
+        layers: [
+          {
+            id: 'layer-1',
+            name: 'Set 1',
+            selectedKeys: designData.selected_keys || [],
+            texture: null,
+            textureUrl: designData.texture_url || null,
+            baseColor: designData.base_color || '#ffffff',
+            textureTransform: designData.texture_config || {
+              zoom: 1,
+              positionX: 0,
+              positionY: 0,
+              rotation: 0
+            },
+            boundingBox: (designData.texture_config?.boundsMin && designData.texture_config?.boundsMax) ? {
+              min: designData.texture_config.boundsMin,
+              max: designData.texture_config.boundsMax
+            } : null,
+            visible: true
+          }
+        ],
+        activeLayerId: 'layer-1',
+        
+        // Emulate key customizations for the single layer
+        keyCustomizations: (designData.selected_keys || []).reduce((acc, key) => ({
+          ...acc,
+          [key]: {
+            layerId: 'layer-1',
+            textureUrl: designData.texture_url || null,
+            baseColor: designData.base_color || '#ffffff',
+            textureTransform: designData.texture_config || { zoom: 1, positionX: 0, positionY: 0, rotation: 0 },
+            boundingBox: null,
+            keyGroup: designData.selected_keys || []
+          }
+        }), {}),
+        
+        selectionLocked: false,
+        selectionMode: false,
+        selectionConflict: null,
+        
+        // Track which design was loaded
+        loadedDesignId: designData.id || null,
+        loadedDesignMeta: designData.id ? {
+          title: designData.name || '',
+          description: designData.description || '',
+          category: designData.category || 'custom',
+          tags: designData.tags || [],
+          isPublic: designData.is_public || false
+        } : null
+      })
+    }
   },
 
   // Clear loaded design tracking (e.g. when starting fresh)

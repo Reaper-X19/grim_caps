@@ -70,17 +70,8 @@ export default function KeySelectionPanel() {
     startSelecting() // Re-enter selection mode
   }
 
-  // Check if any selected keys have conflicts
-  const hasConflicts = selectedKeys.some(keyName => {
-    const customization = keyCustomizations[keyName]
-    return customization && customization.layerId !== activeLayerId
-  })
-
-  // Get conflict info
-  const conflictKeys = selectedKeys.filter(keyName => {
-    const customization = keyCustomizations[keyName]
-    return customization && customization.layerId !== activeLayerId
-  })
+  const selectionConflict = useConfiguratorStore((state) => state.selectionConflict)
+  const clearSelectionConflict = useConfiguratorStore((state) => state.clearSelectionConflict)
 
   // Primary presets to show by default
   const primaryPresets = ['wasd', 'arrows', 'numbers', 'row2', 'row3', 'row4']
@@ -97,6 +88,26 @@ export default function KeySelectionPanel() {
           [{selectedKeys.length} UNITS SELECTED]
         </span>
       </div>
+
+      {/* Conflict Warning Alert */}
+      {selectionConflict && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start justify-between animate-fade-in">
+          <div>
+            <p className="text-xs text-red-400 font-semibold mb-1 flex items-center gap-2">
+              <span className="animate-pulse">⚠️</span> Access Denied
+            </p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+              {selectionConflict}
+            </p>
+          </div>
+          <button 
+            onClick={clearSelectionConflict}
+            className="text-gray-500 hover:text-white transition-colors"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Mode Indicators */}
       {!selectionMode && !selectionLocked && selectedKeys.length === 0 && (
@@ -156,16 +167,6 @@ export default function KeySelectionPanel() {
             <div className="absolute inset-0 bg-grim-cyan/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
           )}
         </button>
-      )}
-
-      {/* Conflict Warning */}
-      {hasConflicts && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-xs text-red-400 font-semibold mb-1">⚠️ Set Conflict</p>
-          <p className="text-xs text-gray-400">
-            {conflictKeys.length} key(s) already assigned to another set. Clear them first to reassign.
-          </p>
-        </div>
       )}
 
       {/* Quick Select Presets - Only show when in selection mode */}
@@ -228,7 +229,7 @@ export default function KeySelectionPanel() {
 
         <button
           onClick={applyToSelectedKeys}
-          disabled={selectedKeys.length === 0 || hasConflicts}
+          disabled={selectedKeys.length === 0}
           className="w-full px-4 py-3 bg-grim-accent hover:bg-grim-accent/90 text-grim-darker font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-grim-accent"
         >
           Apply to Selected Keys

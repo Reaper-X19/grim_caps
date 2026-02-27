@@ -1,12 +1,18 @@
+
 import useConfiguratorStore from '../../store/configuratorStore'
 
 export default function LayerPanel() {
   const layers = useConfiguratorStore((state) => state.layers)
   const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
+  const keyCustomizations = useConfiguratorStore((state) => state.keyCustomizations)
   const addLayer = useConfiguratorStore((state) => state.addLayer)
   const removeLayer = useConfiguratorStore((state) => state.removeLayer)
   const setActiveLayer = useConfiguratorStore((state) => state.setActiveLayer)
   const toggleLayerVisibility = useConfiguratorStore((state) => state.toggleLayerVisibility)
+
+  // Check if active layer has any keys applied
+  const activeLayerHasKeys = Object.values(keyCustomizations).some(c => c.layerId === activeLayerId)
+  const canAddLayer = activeLayerHasKeys || layers.length === 0
 
   return (
     <div className="space-y-6">
@@ -16,7 +22,13 @@ export default function LayerPanel() {
         </h3>
         <button
           onClick={addLayer}
-          className="px-3 py-1 text-[10px] bg-grim-cyan/10 hover:bg-grim-cyan/20 border border-grim-cyan/50 text-grim-cyan font-bold uppercase tracking-widest transition-all hover:shadow-[0_0_10px_rgba(0,240,255,0.3)] clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px]"
+          disabled={!canAddLayer}
+          title={!canAddLayer ? "Apply selection to current layer first" : "Add new layer"}
+          className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-all clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px] ${
+            canAddLayer 
+              ? 'bg-grim-cyan/10 hover:bg-grim-cyan/20 border border-grim-cyan/50 text-grim-cyan hover:shadow-[0_0_10px_rgba(0,240,255,0.3)]' 
+              : 'bg-black/40 border border-white/10 text-gray-500 cursor-not-allowed opacity-50'
+          }`}
           style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
         >
           + Add Node

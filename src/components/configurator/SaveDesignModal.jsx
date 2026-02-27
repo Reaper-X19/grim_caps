@@ -54,23 +54,41 @@ export default function SaveDesignModal({ isOpen, onClose }) {
     if (!formData.title.trim()) return { valid: false, message: 'Title is required' }
     if (formData.title.length < 3) return { valid: false, message: 'Title must be at least 3 characters' }
     if (!formData.authorName.trim()) return { valid: false, message: 'Author name is required' }
-    if (selectedKeys.length === 0) return { valid: false, message: 'Please select at least one key' }
-    if (!activeLayer?.textureUrl) return { valid: false, message: 'Please upload a texture' }
+    
+    // Check if at least one key is assigned across all layers
+    const totalAssignedKeys = Object.keys(keyCustomizations).length
+    if (totalAssignedKeys === 0) return { valid: false, message: 'Please select and apply at least one key' }
 
     return { valid: true }
   }
 
-  // Prepare texture URL (upload blob if needed)
-  const prepareTextureUrl = async () => {
-    let textureUrl = activeLayer.textureUrl
-    if (textureUrl && textureUrl.startsWith('blob:')) {
-      const response = await fetch(textureUrl)
-      const blob = await response.blob()
-      const file = new File([blob], 'texture.png', { type: blob.type })
-      const tempDesignId = crypto.randomUUID()
-      textureUrl = await uploadTexture(file, tempDesignId)
+  // Deduplicate and upload all unique textures across all layers
+  const prepareAllTextures = async (tempDesignId) => {
+    const textureMap = new Map() // Maps original blob URL to new Supabase URL
+    
+    // Find all unique blob URLs
+    const uniqueBlobs = new Set()
+    layers.forEach(layer => {
+      if (layer.textureUrl && layer.textureUrl.startsWith('blob:')) {
+        uniqueBlobs.add(layer.textureUrl)
+      }
+    })
+
+    // Upload each unique blob
+    for (const blobUrl of uniqueBlobs) {
+      try {
+        const response = await fetch(blobUrl)
+        const blob = await response.blob()
+        const file = new File([blob], 'texture.png', { type: blob.type })
+        const supabaseUrl = await uploadTexture(file, tempDesignId)
+        textureMap.set(blobUrl, supabaseUrl)
+      } catch (err) {
+        console.error('Failed to upload texture:', blobUrl, err)
+        throw new Error('Failed to upload one or more textures.')
+      }
     }
-    return textureUrl
+
+    return textureMap
   }
 
   // Auto-fill name and email when user is signed in
@@ -135,8 +153,35 @@ export default function SaveDesignModal({ isOpen, onClose }) {
     setError(null)
 
     try {
-      const pricing = calculateDesignPrice(selectedKeys.length)
-      const textureUrl = await prepareTextureUrl()
+      const allAssignedKeys = Object.keys(keyCustomizations)
+      const pricing = calculateDesignPrice(allAssignedKeys.length)
+      const tempDesignId = crypto.randomUUID()
+      
+      // Upload all unique textures and get the mapping
+      const uploadedTexturesMap = await prepareAllTextures(tempDesignId)
+
+      // Create deeply cloned layer and customization objects with updated URLs
+      const finalLayers = layers.map(layer => {
+        const newLayer = { ...layer }
+        if (newLayer.textureUrl && uploadedTexturesMap.has(newLayer.textureUrl)) {
+          newLayer.textureUrl = uploadedTexturesMap.get(newLayer.textureUrl)
+        }
+        // Don't save the File object to DB
+        delete newLayer.texture
+        return newLayer
+      })
+
+      const finalCustomizations = {}
+      Object.keys(keyCustomizations).forEach(keyName => {
+        const custom = { ...keyCustomizations[keyName] }
+        if (custom.textureUrl && uploadedTexturesMap.has(custom.textureUrl)) {
+          custom.textureUrl = uploadedTexturesMap.get(custom.textureUrl)
+        }
+        finalCustomizations[keyName] = custom
+      })
+
+      // Primary Texture URL (fallback for old renderer/gallery)
+      const primaryTextureUrl = finalLayers[0]?.textureUrl || null
 
       // Prepare design data
       const designData = {
@@ -144,19 +189,24 @@ export default function SaveDesignModal({ isOpen, onClose }) {
         description: formData.description.trim() || null,
         authorName: formData.authorName.trim(),
         authorEmail: formData.authorEmail.trim() || null,
-        textureUrl: textureUrl,
+        textureUrl: primaryTextureUrl, // Fallback for gallery
         textureTransform: {
-          ...activeLayer.textureTransform,
-          // Include bounding box for consistent texture mapping on reload
-          ...(activeLayer.boundingBox && {
-            boundsMin: { x: activeLayer.boundingBox.min.x, y: activeLayer.boundingBox.min.y },
-            boundsMax: { x: activeLayer.boundingBox.max.x, y: activeLayer.boundingBox.max.y }
-          })
+          // Provide first layer's transform as fallback
+          ...finalLayers[0]?.textureTransform,
+          ...(finalLayers[0]?.boundingBox && {
+            boundsMin: { x: finalLayers[0].boundingBox.min.x, y: finalLayers[0].boundingBox.min.y },
+            boundsMax: { x: finalLayers[0].boundingBox.max.x, y: finalLayers[0].boundingBox.max.y }
+          }),
+          // New exact multi-layer structure
+          multilayers: {
+            layers: finalLayers,
+            keyCustomizations: finalCustomizations
+          }
         },
-        selectedKeys: selectedKeys,
-        keyGroup: selectedKeys,
-        baseColor: activeLayer.baseColor,
-        keyCount: selectedKeys.length,
+        selectedKeys: allAssignedKeys, // All assigned keys across all layers
+        keyGroup: allAssignedKeys,
+        baseColor: finalLayers[0]?.baseColor || '#ffffff',
+        keyCount: allAssignedKeys.length,
         pricePerKey: pricing.pricePerKey,
         totalPrice: pricing.totalPrice,
         isPublic: formData.isPublic,
