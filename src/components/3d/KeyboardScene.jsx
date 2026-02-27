@@ -111,25 +111,40 @@ function AnimatedKeyboard() {
     setTextureReady(true)
   }, [])
 
-  // Start GSAP only after texture is ready
+  // Start GSAP only after texture is ready + 2 render frames
+  // The double-rAF ensures:
+  //   Frame 1: React commits, Three.js scene graph updated with materials
+  //   Frame 2: GPU has processed textures, matrixWorld is stable
+  //   Frame 3: GSAP starts — wrapper moves, but textures are already baked
   useEffect(() => {
     if (!textureReady || !ref.current || animStartedRef.current) return
-    animStartedRef.current = true
-    const g = ref.current
 
-    // Set start state
-    g.position.set(WRAP.px, WRAP.py, WRAP.pz)
-    g.rotation.set(WRAP.rx, WRAP.ry, WRAP.rz)
-    g.scale.setScalar(WRAP.s)
-    g.visible = true
+    let raf1, raf2
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (!ref.current || animStartedRef.current) return
+        animStartedRef.current = true
+        const g = ref.current
 
-    const tl = gsap.timeline()
-    tl.to(g.position, { x: 0, y: 0, z: 0, duration: 3.6, ease: 'power4.out' }, 0)
-    tl.to(g.rotation, { x: 0, y: 0, z: 0, duration: 3.2, ease: 'power3.out' }, 0)
-    tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.8, ease: 'power4.out' }, 0.15)
-    tlRef.current = tl
+        // Set start state (wrapper at WRAP position — far away, small)
+        g.position.set(WRAP.px, WRAP.py, WRAP.pz)
+        g.rotation.set(WRAP.rx, WRAP.ry, WRAP.rz)
+        g.scale.setScalar(WRAP.s)
+        g.visible = true
 
-    return () => { tl.kill() }
+        const tl = gsap.timeline()
+        tl.to(g.position, { x: 0, y: 0, z: 0, duration: 3.6, ease: 'power4.out' }, 0)
+        tl.to(g.rotation, { x: 0, y: 0, z: 0, duration: 3.2, ease: 'power3.out' }, 0)
+        tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.8, ease: 'power4.out' }, 0.15)
+        tlRef.current = tl
+      })
+    })
+
+    return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+      if (tlRef.current) tlRef.current.kill()
+    }
   }, [textureReady])
 
   // Cleanup on unmount

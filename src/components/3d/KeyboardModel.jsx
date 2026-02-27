@@ -26,6 +26,7 @@ export default function KeyboardModel({ introComplete = false, onTextureReady })
   const originalMaterialsRef = useRef(new Map()) // Store original materials from GLTF
   // Cache bounding boxes by a stable string key (sorted key names)
   const boundingBoxCacheRef = useRef(new Map())
+  const textureReadyFiredRef = useRef(false) // Ensure onTextureReady fires only once
 
   // Get state from store
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
@@ -326,8 +327,11 @@ export default function KeyboardModel({ introComplete = false, onTextureReady })
         child.material.needsUpdate = true
       }
     })
-    // Signal that textures/materials have been applied
-    if (onTextureReady) onTextureReady()
+    // Signal that textures/materials have been applied (fire only once)
+    if (onTextureReady && !textureReadyFiredRef.current) {
+      textureReadyFiredRef.current = true
+      onTextureReady()
+    }
   }, [
     introComplete,
     selectedKeys,
