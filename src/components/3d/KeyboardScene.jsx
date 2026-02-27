@@ -99,8 +99,9 @@ function IntroWrapper({ onComplete }) {
 }
 
 // ─── AnimatedKeyboard ─────────────────────────────────────────────────────────
-// Passes introComplete=true immediately (textures apply first),
-// then starts GSAP animation after KeyboardModel signals onTextureReady.
+// Workflow: textures apply invisibly → gentle reveal animation plays.
+// The keyboard starts slightly below and scaled down, then smoothly rises
+// to its final position. No extreme off-screen positions that could flash.
 function AnimatedKeyboard() {
   const ref = useRef()
   const tlRef = useRef(null)
@@ -111,11 +112,7 @@ function AnimatedKeyboard() {
     setTextureReady(true)
   }, [])
 
-  // Start GSAP only after texture is ready + 2 render frames
-  // The double-rAF ensures:
-  //   Frame 1: React commits, Three.js scene graph updated with materials
-  //   Frame 2: GPU has processed textures, matrixWorld is stable
-  //   Frame 3: GSAP starts — wrapper moves, but textures are already baked
+  // Gentle reveal after textures are applied
   useEffect(() => {
     if (!textureReady || !ref.current || animStartedRef.current) return
 
@@ -126,16 +123,36 @@ function AnimatedKeyboard() {
         animStartedRef.current = true
         const g = ref.current
 
-        // Set start state (wrapper at WRAP position — far away, small)
-        g.position.set(WRAP.px, WRAP.py, WRAP.pz)
-        g.rotation.set(WRAP.rx, WRAP.ry, WRAP.rz)
-        g.scale.setScalar(WRAP.s)
+        // Start: slightly below center, scaled down, fully transparent
+        g.position.set(0, -1.5, 0)
+        g.scale.setScalar(0.6)
+
+        // Make all meshes transparent (will fade in)
+        g.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.transparent = true
+            child.material.opacity = 0
+          }
+        })
         g.visible = true
 
         const tl = gsap.timeline()
-        tl.to(g.position, { x: 0, y: 0, z: 0, duration: 3.6, ease: 'power4.out' }, 0)
-        tl.to(g.rotation, { x: 0, y: 0, z: 0, duration: 3.2, ease: 'power3.out' }, 0)
-        tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.8, ease: 'power4.out' }, 0.15)
+
+        // Fade in all materials
+        const meshes = []
+        g.traverse(child => {
+          if (child.isMesh && child.material) meshes.push(child.material)
+        })
+        meshes.forEach(mat => {
+          tl.to(mat, { opacity: 1, duration: 1.2, ease: 'power2.out' }, 0)
+        })
+
+        // Slide up to final position
+        tl.to(g.position, { y: 0, duration: 2.0, ease: 'power3.out' }, 0)
+
+        // Scale up to full size
+        tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.0, ease: 'power3.out' }, 0.1)
+
         tlRef.current = tl
       })
     })
