@@ -23,7 +23,7 @@
 import { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { useControls } from 'leva'
+
 import gsap from 'gsap'
 import { KeyboardGlossyModel } from './Keyboard_Glossy'
 
@@ -68,26 +68,15 @@ export default function GlossyKeyboardHero({ mouse }) {
   // Glow pulse ref — multiplied into emission during landing
   const glowMult = useRef(1.0)
 
-  const {
-    posX, posY, posZ,
-    rotX, rotY, rotZ,
-    scale,
-    emissionColor, emissionIntensity, keycapEmissionIntensity,
-    metalness, roughness,
-  } = useControls('Glossy Keyboard', {
-    posX:  { value: 0.2,  min: -10, max: 10, step: 0.1 },
-    posY:  { value: -0.0, min: -10, max: 10, step: 0.1 },
-    posZ:  { value: 2.7,  min: -10, max: 10, step: 0.1 },
-    rotX:  { value: 1.10, min: -Math.PI, max: Math.PI, step: 0.01 },
-    rotY:  { value: 0.40, min: -Math.PI, max: Math.PI, step: 0.01 },
-    rotZ:  { value: 0.17, min: -Math.PI, max: Math.PI, step: 0.01 },
-    scale: { value: 3.5,  min: 0.1, max: 6, step: 0.1 },
-    emissionColor:          { value: '#00ffcc' },
-    emissionIntensity:      { value: 0.5,  min: 0, max: 10,  step: 0.1 },
-    keycapEmissionIntensity:{ value: 0.10, min: 0, max: 5,   step: 0.05 },
-    metalness: { value: 0.30, min: 0, max: 1, step: 0.05 },
-    roughness: { value: 0.30, min: 0, max: 1, step: 0.05 },
-  })
+  // Production defaults
+  const posX = 0.2, posY = -0.0, posZ = 2.7
+  const rotX = 1.10, rotY = 0.40, rotZ = 0.17
+  const scale = 3.5
+  const emissionColor = '#00ffcc'
+  const emissionIntensity = 0.5
+  const keycapEmissionIntensity = 0.10
+  const metalness = 0.30
+  const roughness = 0.30
 
   // ─── Materials + GSAP intro ──────────────────────────────────────────────────
   useEffect(() => {

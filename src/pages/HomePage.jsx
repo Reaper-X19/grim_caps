@@ -7,7 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Canvas } from '@react-three/fiber'
 import { PerspectiveCamera, Environment } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
-import { useControls } from 'leva'
+
 import * as THREE from 'three'
 import GlossyKeyboardHero, { HeroCameraRig } from '../components/3d/GlossyKeyboardHero'
 
@@ -28,12 +28,10 @@ export default function HomePage() {
     }
   }, [])
 
-  // Bloom controls
-  const { bloomIntensity, bloomThreshold, bloomSmoothing } = useControls('Bloom Effect', {
-    bloomIntensity: { value: 1.5, min: 0, max: 3, step: 0.1 },
-    bloomThreshold: { value: 0.9, min: 0, max: 1, step: 0.05 },
-    bloomSmoothing: { value: 0.9, min: 0, max: 1, step: 0.05 }
-  })
+  // Bloom settings (production defaults)
+  const bloomIntensity = 1.5
+  const bloomThreshold = 0.9
+  const bloomSmoothing = 0.9
 
   // GSAP Animations
   useGSAP(() => {
