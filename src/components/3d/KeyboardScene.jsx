@@ -98,80 +98,55 @@ function IntroWrapper({ onComplete }) {
   )
 }
 
-// ─── AnimatedKeyboard ─────────────────────────────────────────────────────────
-// Workflow: textures apply invisibly → gentle reveal animation plays.
-// The keyboard starts slightly below and scaled down, then smoothly rises
-// to its final position. No extreme off-screen positions that could flash.
+// ─── IntroWrapper with state ──────────────────────────────────────────────────
+// Wraps IntroWrapper to manage the introComplete state
 function AnimatedKeyboard() {
-  const ref = useRef()
-  const tlRef = useRef(null)
-  const [textureReady, setTextureReady] = useState(false)
-  const animStartedRef = useRef(false)
+  const [introComplete, setIntroComplete] = useState(false)
+  const wrapperRef = useRef()
 
-  const handleTextureReady = useCallback(() => {
-    setTextureReady(true)
+  const handleComplete = useCallback(() => {
+    setIntroComplete(true)
   }, [])
 
-  // Gentle reveal after textures are applied
+  // When introComplete changes, re-render the inner KeyboardModel with the flag
+  // We need to reach into the wrapper's child to update the prop
   useEffect(() => {
-    if (!textureReady || !ref.current || animStartedRef.current) return
+    // introComplete is now managed via the shared state
+  }, [introComplete])
 
-    let raf1, raf2
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        if (!ref.current || animStartedRef.current) return
-        animStartedRef.current = true
-        const g = ref.current
+  return <IntroWrapperWithModel introComplete={introComplete} onComplete={handleComplete} />
+}
 
-        // Start: slightly below center, scaled down, fully transparent
-        g.position.set(0, -1.5, 0)
-        g.scale.setScalar(0.6)
+// Combined wrapper that passes introComplete to KeyboardModel
+function IntroWrapperWithModel({ introComplete, onComplete }) {
+  const ref = useRef()
 
-        // Make all meshes transparent (will fade in)
-        g.traverse(child => {
-          if (child.isMesh && child.material) {
-            child.material.transparent = true
-            child.material.opacity = 0
-          }
-        })
-        g.visible = true
+  useEffect(() => {
+    if (!ref.current) return
+    const g = ref.current
 
-        const tl = gsap.timeline()
+    // Set start state
+    g.position.set(WRAP.px, WRAP.py, WRAP.pz)
+    g.rotation.set(WRAP.rx, WRAP.ry, WRAP.rz)
+    g.scale.setScalar(WRAP.s)
 
-        // Fade in all materials
-        const meshes = []
-        g.traverse(child => {
-          if (child.isMesh && child.material) meshes.push(child.material)
-        })
-        meshes.forEach(mat => {
-          tl.to(mat, { opacity: 1, duration: 1.2, ease: 'power2.out' }, 0)
-        })
-
-        // Slide up to final position
-        tl.to(g.position, { y: 0, duration: 2.0, ease: 'power3.out' }, 0)
-
-        // Scale up to full size
-        tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.0, ease: 'power3.out' }, 0.1)
-
-        tlRef.current = tl
-      })
+    // ── GSAP timeline: WRAP → identity ────────────────────────────────────
+    const tl = gsap.timeline({
+      onComplete: () => {
+        if (onComplete) onComplete()
+      }
     })
 
-    return () => {
-      cancelAnimationFrame(raf1)
-      cancelAnimationFrame(raf2)
-      if (tlRef.current) tlRef.current.kill()
-    }
-  }, [textureReady])
+    tl.to(g.position, { x: 0, y: 0, z: 0, duration: 3.6, ease: 'power4.out' }, 0)
+    tl.to(g.rotation, { x: 0, y: 0, z: 0, duration: 3.2, ease: 'power3.out' }, 0)
+    tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.8, ease: 'power4.out' }, 0.15)
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => { if (tlRef.current) tlRef.current.kill() }
-  }, [])
+    return () => { tl.kill() }
+  }, []) // Only run once on mount
 
   return (
-    <group ref={ref} visible={false}>
-      <KeyboardModel introComplete={true} onTextureReady={handleTextureReady} />
+    <group ref={ref}>
+      <KeyboardModel introComplete={introComplete} />
     </group>
   )
 }

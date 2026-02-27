@@ -10,7 +10,7 @@ import {
   calculateKeysBoundingBox
 } from '../../shaders/KeycapShader'
 
-export default function KeyboardModel({ introComplete = false, onTextureReady }) {
+export default function KeyboardModel({ introComplete = false }) {
   const groupRef = useRef()
   const { camera, raycaster, pointer, gl } = useThree()
 
@@ -26,7 +26,6 @@ export default function KeyboardModel({ introComplete = false, onTextureReady })
   const originalMaterialsRef = useRef(new Map()) // Store original materials from GLTF
   // Cache bounding boxes by a stable string key (sorted key names)
   const boundingBoxCacheRef = useRef(new Map())
-  const textureReadyFiredRef = useRef(false) // Ensure onTextureReady fires only once
 
   // Get state from store
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
@@ -126,6 +125,9 @@ export default function KeyboardModel({ introComplete = false, onTextureReady })
   useEffect(() => {
     if (!groupRef.current) return
 
+    // ── GUARD: Don't apply textures until intro animation is done ──
+    // During animation, matrixWorld is mid-tween so world-space UV bounds would be wrong.
+    // We still allow selection highlighting (emissive glow) since that doesn't need bounds.
     if (!introComplete) {
       // Only handle selection highlighting during intro
       groupRef.current.traverse((child) => {
@@ -327,13 +329,8 @@ export default function KeyboardModel({ introComplete = false, onTextureReady })
         child.material.needsUpdate = true
       }
     })
-    // Signal that textures/materials have been applied (fire only once)
-    if (onTextureReady && !textureReadyFiredRef.current) {
-      textureReadyFiredRef.current = true
-      onTextureReady()
-    }
   }, [
-    introComplete,
+    introComplete,  // ← NEW: re-run when animation completes
     selectedKeys,
     keyCustomizations,
     activeLayer?.baseColor,
