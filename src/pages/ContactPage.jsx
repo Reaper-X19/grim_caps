@@ -63,7 +63,7 @@ export default function ContactPage() {
             <span className="font-mono text-grim-cyan text-xs tracking-[0.3em] font-bold transform skew-x-[10deg] inline-block">CONTACT US // GRIM CAPS</span>
           </div>
 
-          <h1 className="text-6xl md:text-7xl font-display font-black mb-6 uppercase tracking-widest relative inline-block pb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-display font-black mb-6 uppercase tracking-widest relative inline-block pb-4">
             <span className="absolute inset-0 text-grim-cyan blur-[2px] opacity-70 animate-pulse-slow">GET IN TOUCH</span>
             <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-white via-grim-cyan to-grim-purple">
               GET IN TOUCH
@@ -142,7 +142,7 @@ export default function ContactPage() {
             <div className="absolute -top-4 -left-4 w-8 h-8 border-t-2 border-l-2 border-grim-cyan opacity-50"></div>
             <div className="absolute -bottom-4 -right-4 w-8 h-8 border-b-2 border-r-2 border-grim-cyan opacity-50"></div>
 
-            <div className="bg-black/40 backdrop-blur-md border border-white/10 p-8 shadow-2xl relative overflow-hidden">
+            <div className="bg-black/40 backdrop-blur-md border border-white/10 p-4 sm:p-6 lg:p-8 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-grim-cyan via-grim-purple to-grim-cyan opacity-50"></div>
 
               <h2 className="text-2xl font-display font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">

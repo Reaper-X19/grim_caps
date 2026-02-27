@@ -224,14 +224,14 @@ export default function GalleryPage() {
         </section>
 
         {/* Filters Section - Holo Bar */}
-        <section className="sticky top-20 z-40 py-6 px-4 backdrop-blur-sm border-b border-white/5 bg-grim-void/80">
+        <section className="sticky top-16 sm:top-20 z-40 py-4 sm:py-6 px-4 backdrop-blur-sm border-b border-white/5 bg-grim-void/80">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
               {categories.map((category) => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`relative px-6 py-2 text-xs font-bold uppercase tracking-widest transition-all duration-300 clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px] ${selectedCategory === category
+                  className={`relative px-3 sm:px-6 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all duration-300 clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px] ${selectedCategory === category
                     ? 'bg-white !text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:bg-white hover:!text-black'
                     : 'bg-grim-panel text-gray-500 hover:text-white hover:bg-white/5 border border-white/5 hover:border-grim-cyan/50'
                     }`}

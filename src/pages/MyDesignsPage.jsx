@@ -131,7 +131,7 @@ export default function MyDesignsPage() {
             <div className="inline-block mb-4 px-4 py-1 bg-grim-cyan/10 border border-grim-cyan/30 rounded-none transform skew-x-[-10deg]">
               <span className="font-mono text-grim-cyan text-xs tracking-[0.3em] font-bold transform skew-x-[10deg] inline-block uppercase">ARCHIVE // DESIGN_LOG</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-display font-black text-white uppercase tracking-tighter italic">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-display font-black text-white uppercase tracking-tighter italic">
               MY <span className="text-transparent bg-clip-text bg-gradient-to-r from-grim-cyan to-grim-purple">DESIGNS</span>
             </h1>
           </div>
@@ -144,7 +144,7 @@ export default function MyDesignsPage() {
               <button
                 key={tab.id}
                 onClick={() => setFilter(tab.id)}
-                className={`px-6 py-2 font-mono text-xs font-bold transition-all border ${
+                className={`px-3 sm:px-6 py-2 font-mono text-xs font-bold transition-all border ${
                   filter === tab.id
                     ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)]'
                     : 'bg-black/40 text-gray-500 border-white/10 hover:border-white/30 hover:text-white'
@@ -216,7 +216,7 @@ export default function MyDesignsPage() {
                 </div>
 
                 {/* Info Panel */}
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="font-display font-bold text-xl text-white uppercase tracking-wider group-hover:text-grim-cyan transition-colors truncate pr-4">
                       {design.name}

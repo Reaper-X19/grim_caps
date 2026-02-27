@@ -159,7 +159,7 @@ function InfoOverlay({ anim, visible }) {
         </h1>
 
         {/* Description */}
-        <p style={{
+        <p className="hidden sm:block" style={{
           fontFamily: 'Inter', fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)',
           maxWidth: 500, lineHeight: 1.6, margin: 0
         }}>
@@ -228,8 +228,8 @@ export default function PlaygroundPage() {
 
       {/* ── Arrow navigation ─────────────────────────────────────── */}
       {[
-        { dir: 'left', fn: prev, Icon: ChevronLeft, style: { left: 20 } },
-        { dir: 'right', fn: next, Icon: ChevronRight, style: { right: 20 } },
+        { dir: 'left', fn: prev, Icon: ChevronLeft, style: { left: 8 } },
+        { dir: 'right', fn: next, Icon: ChevronRight, style: { right: 8 } },
       ].map(({ dir, fn, Icon, style: s }) => (
         <button
           key={dir}
@@ -238,16 +238,15 @@ export default function PlaygroundPage() {
             position: 'absolute', top: '50%', ...s,
             transform: 'translateY(-50%)',
             zIndex: 20,
-            width: 50, height: 50,
+            width: 40, height: 40,
             borderRadius: '50%',
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid rgba(255,255,255,0.1)',
             color: '#fff',
-            display: 'flex', alignItems: 'center', justifyCenter: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
             padding: 0,
-            justifyContent: 'center',
           }}
           onMouseEnter={e => {
             e.currentTarget.style.background = `${anim.accent}28`
@@ -258,21 +257,35 @@ export default function PlaygroundPage() {
             e.currentTarget.style.boxShadow = 'none'
           }}
         >
-          <Icon size={22} />
+          <Icon size={18} />
         </button>
       ))}
 
-      {/* ── Progress dots ────────────────────────────────────────── */}
-      <div style={{
-        position: 'absolute', top: 100, right: 48,
-        zIndex: 20, display: 'flex', flexDirection: 'column', gap: 12
+      {/* ── Progress dots — vertical on desktop, horizontal on mobile ── */}
+      <div className="playground-dots" style={{
+        position: 'absolute',
+        zIndex: 20,
+        display: 'flex', gap: 10,
       }}>
+        <style>{`
+          .playground-dots {
+            bottom: 24px; left: 50%; transform: translateX(-50%);
+            flex-direction: row;
+          }
+          @media (min-width: 768px) {
+            .playground-dots {
+              top: 100px; right: 32px; left: auto; bottom: auto;
+              transform: none;
+              flex-direction: column;
+            }
+          }
+        `}</style>
         {ANIMATIONS.map((a, i) => (
           <button
             key={a.id}
             onClick={() => goTo(i)}
             style={{
-              width: 4, height: i === idx ? 24 : 4,
+              width: i === idx ? 24 : 4, height: 4,
               borderRadius: 2,
               background: i === idx ? anim.accent : 'rgba(255,255,255,0.2)',
               border: 'none', padding: 0, cursor: 'pointer',

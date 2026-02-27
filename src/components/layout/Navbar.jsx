@@ -213,6 +213,14 @@ export default function Navbar() {
                 </button>
               </div>
             )}
+
+            {/* Mobile Cart + Auth */}
+            <div className={`pt-4 mt-4 border-t border-white/10 flex items-center justify-between ${!user ? 'hidden' : ''}`}>
+              <div className="transform hover:scale-110 transition-transform duration-300">
+                <CartIcon />
+              </div>
+              {user && <UserMenu />}
+            </div>
           </div>
         </div>
       </nav>

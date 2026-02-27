@@ -41,7 +41,7 @@ export default function AboutPage() {
             <span className="font-mono text-grim-cyan text-xs tracking-[0.3em] font-bold transform skew-x-[10deg] inline-block uppercase">ABOUT US // GRIM CAPS</span>
           </div>
 
-          <h1 className="text-5xl md:text-8xl font-display font-black mb-6 uppercase tracking-widest relative inline-block pb-4">
+          <h1 className="text-3xl sm:text-5xl md:text-8xl font-display font-black mb-6 uppercase tracking-widest relative inline-block pb-4">
             <span className="absolute inset-0 text-grim-purple blur-[2px] opacity-70 animate-pulse-slow">OUR MISSION</span>
             <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-white via-grim-cyan to-grim-purple">
               OUR MISSION
@@ -61,7 +61,7 @@ export default function AboutPage() {
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-4 mb-12">
               <div className="h-[2px] w-12 bg-grim-cyan"></div>
-              <h2 className="text-3xl font-display font-bold text-white uppercase tracking-widest">
+              <h2 className="text-xl sm:text-3xl font-display font-bold text-white uppercase tracking-widest">
                 OUR VALUES
               </h2>
               <div className="h-[2px] flex-grow bg-gradient-to-r from-grim-cyan/50 to-transparent"></div>

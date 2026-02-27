@@ -161,7 +161,7 @@ export default function HomePage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row items-end justify-between mb-24 border-b border-white/10 pb-8">
             <div className="flex flex-col gap-4">
-              <h2 className="section-title text-6xl md:text-8xl font-display font-black text-white tracking-tighter leading-none uppercase italic">
+              <h2 className="section-title text-4xl sm:text-6xl md:text-8xl font-display font-black text-white tracking-tighter leading-none uppercase italic">
                 WHY <span className="text-white/20">GRiM?</span>
               </h2>
             </div>
@@ -177,7 +177,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border border-white/10 bg-white/[0.02] backdrop-blur-3xl divide-y lg:divide-y-0 lg:divide-x divide-white/10">
 
             {/* MODULE 01: LOGISTICS (Speed) */}
-            <div className="feature-card group relative min-h-[400px] h-auto lg:h-[500px] p-8 flex flex-col justify-between overflow-hidden transition-all duration-700 hover:bg-white/[0.03]">
+            <div className="feature-card group relative min-h-[300px] sm:min-h-[400px] h-auto lg:h-[500px] p-6 sm:p-8 flex flex-col justify-between overflow-hidden transition-all duration-700 hover:bg-white/[0.03]">
               {/* Scanline Overlay */}
               <div className="absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(0,240,255,0.05)_50%,transparent_100%)] h-[200%] w-full animate-scan pointer-events-none opacity-0 group-hover:opacity-100"></div>
 
@@ -210,7 +210,7 @@ export default function HomePage() {
             </div>
 
             {/* MODULE 02: ENGINEER (Quality) */}
-            <div className="feature-card group relative min-h-[400px] h-auto lg:h-[500px] p-8 flex flex-col justify-between overflow-hidden transition-all duration-700 hover:bg-white/[0.03]">
+            <div className="feature-card group relative min-h-[300px] sm:min-h-[400px] h-auto lg:h-[500px] p-6 sm:p-8 flex flex-col justify-between overflow-hidden transition-all duration-700 hover:bg-white/[0.03]">
               <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-700">
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-grim-purple/20 blur-[100px] rounded-full mix-blend-screen"></div>
               </div>
@@ -246,7 +246,7 @@ export default function HomePage() {
             </div>
 
             {/* MODULE 03: ATELIER (Custom) */}
-            <div className="feature-card group relative min-h-[400px] h-auto lg:h-[500px] p-8 flex flex-col justify-between overflow-hidden transition-all duration-700 hover:bg-white/[0.03]">
+            <div className="feature-card group relative min-h-[300px] sm:min-h-[400px] h-auto lg:h-[500px] p-6 sm:p-8 flex flex-col justify-between overflow-hidden transition-all duration-700 hover:bg-white/[0.03]">
               <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-700">
                 <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-grim-yellow/10 blur-[100px] rounded-full mix-blend-screen"></div>
               </div>
@@ -305,7 +305,7 @@ export default function HomePage() {
 
         <div className="cta-content max-w-6xl mx-auto text-center relative z-10 flex flex-col items-center">
 
-          <h2 className="text-5xl md:text-8xl font-black leading-[0.85] tracking-tighter text-white uppercase transform scale-y-110 mb-6 drop-shadow-2xl italic">
+          <h2 className="text-3xl sm:text-5xl md:text-8xl font-black leading-[0.85] tracking-tighter text-white uppercase transform scale-y-110 mb-6 drop-shadow-2xl italic">
             READY TO CREATE<br />
             SOMETHING UNIQUE
           </h2>

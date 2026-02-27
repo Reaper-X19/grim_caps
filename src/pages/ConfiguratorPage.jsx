@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { Save } from 'lucide-react'
+import { Save, Layers, Sliders, MousePointerClick, X, ChevronUp } from 'lucide-react'
 import KeyboardScene from '../components/3d/KeyboardScene'
 import LayerPanel from '../components/configurator/LayerPanel'
 import ControlPanel from '../components/configurator/ControlPanel'
@@ -10,12 +10,17 @@ import ErrorBoundary from '../components/ErrorBoundary'
 export default function ConfiguratorPage() {
   const [activeTab, setActiveTab] = useState('customize')
   const [showSaveModal, setShowSaveModal] = useState(false)
+  // Mobile drawer state
+  const [mobileDrawer, setMobileDrawer] = useState(null) // null | 'layers' | 'customize' | 'select'
+
+  const toggleDrawer = (drawer) => {
+    setMobileDrawer(prev => prev === drawer ? null : drawer)
+  }
 
   return (
     <div className="fixed inset-0 bg-[#050505] overflow-hidden">
       {/* 1. Cyber-Void Background */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-grim-void overflow-hidden">
-        {/* Dynamic Grid - Using a simple repeating linear gradient for performance */}
         <div className="absolute inset-0 opacity-20"
           style={{
             backgroundImage: `
@@ -23,12 +28,8 @@ export default function ConfiguratorPage() {
                  linear-gradient(90deg, rgba(0, 240, 255, 0.1) 1px, transparent 1px)
                `,
             backgroundSize: '50px 50px',
-            // Simple animation via keyframes can be added in global CSS, or simulated here with a transform if needed.
-            // For now, static but high-contrast.
           }}>
         </div>
-
-        {/* Glowing Orbs */}
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-grim-purple/20 rounded-full blur-[100px] animate-pulse-slow"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-grim-cyan/20 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
       </div>
@@ -42,7 +43,6 @@ export default function ConfiguratorPage() {
           <Suspense fallback={
             <div className="w-full h-full flex items-center justify-center bg-grim-void">
               <div className="text-center relative">
-                {/* Decorative Loader Ring */}
                 <div className="absolute inset-0 border-4 border-grim-purple/30 rounded-full animate-ping"></div>
                 <div className="relative z-10 animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-grim-cyan"></div>
                 <p className="mt-4 text-grim-cyan font-display font-bold uppercase tracking-[0.2em] text-sm animate-pulse">
@@ -56,16 +56,16 @@ export default function ConfiguratorPage() {
         </ErrorBoundary>
       </div>
 
-      {/* Floating Left Panel - Layers (Cyber-Holo Style) */}
-      <div className="absolute left-8 top-28 bottom-8 w-80 pointer-events-none perspective-[1000px]">
+      {/* ═══════════════════════════════════════════════════════════════
+          DESKTOP LAYOUT (≥1024px) — Side panels
+          ═══════════════════════════════════════════════════════════════ */}
+
+      {/* Floating Left Panel - Layers */}
+      <div className="hidden lg:block absolute left-8 top-28 bottom-8 w-80 pointer-events-none perspective-[1000px]">
         <div className="h-full flex flex-col pointer-events-auto transform transition-transform hover:translate-x-1 duration-300">
           <div className="bg-grim-panel/80 backdrop-blur-xl p-0 rounded-xl shadow-[0_0_30px_rgba(176,38,255,0.15)] max-h-full overflow-y-auto border border-white/5 flex flex-col h-full relative group overflow-hidden">
-            {/* Holographic Border Effect */}
             <div className="absolute inset-0 rounded-xl border border-transparent bg-gradient-to-br from-grim-cyan/30 via-transparent to-grim-purple/30 opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ maskImage: 'linear-gradient(black, black)', WebkitMaskImage: 'linear-gradient(black, black)', maskComposite: 'exclude', WebkitMaskComposite: 'xor' }}></div>
-
-            {/* Top Glow Line */}
             <div className="h-[2px] w-full bg-gradient-to-r from-grim-cyan via-grim-purple to-grim-pink shadow-[0_0_10px_rgba(0,240,255,0.5)]"></div>
-
             <div className="p-6 flex-1 overflow-y-auto custom-scrollbar relative z-10">
               <LayerPanel />
             </div>
@@ -73,25 +73,19 @@ export default function ConfiguratorPage() {
         </div>
       </div>
 
-      {/* Floating Right Panel - Controls (Cyber-Holo Style) */}
-      <div className="absolute right-8 top-28 bottom-8 w-80 pointer-events-none z-10 perspective-[1000px]">
+      {/* Floating Right Panel - Controls */}
+      <div className="hidden lg:block absolute right-8 top-28 bottom-8 w-80 pointer-events-none z-10 perspective-[1000px]">
         <div className="h-full flex flex-col pointer-events-auto transform transition-transform hover:-translate-x-1 duration-300">
           <div className="bg-grim-panel/80 backdrop-blur-xl p-0 rounded-xl shadow-[0_0_30px_rgba(0,240,255,0.15)] max-h-full overflow-hidden border border-white/5 flex flex-col h-full relative group">
-            {/* Holographic Border Effect */}
             <div className="absolute inset-0 rounded-xl border border-transparent bg-gradient-to-bl from-grim-pink/30 via-transparent to-grim-cyan/30 opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-
-            {/* Top Glow Line */}
             <div className="h-[2px] w-full bg-gradient-to-l from-grim-cyan via-grim-purple to-grim-pink shadow-[0_0_10px_rgba(176,38,255,0.5)]"></div>
-
             <div className="p-6 flex flex-col h-full relative z-10">
-              {/* Tab Headers - Neon Segmented Control */}
+              {/* Tab Headers */}
               <div className="flex mb-6 bg-black/40 p-1 rounded-lg border border-white/5 relative">
-                {/* Active Slider Background */}
                 <div
                   className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-gradient-to-r from-grim-purple/20 to-grim-cyan/20 border border-grim-cyan/30 rounded-md transition-all duration-300 ease-out shadow-[0_0_15px_rgba(191,0,255,0.2)] ${activeTab === 'select' ? 'translate-x-[100%] left-1' : 'left-1'
                     }`}
                 ></div>
-
                 <button
                   onClick={() => setActiveTab('customize')}
                   className={`flex-1 py-2 font-display font-bold text-xs uppercase tracking-wider relative z-10 transition-colors duration-300 ${activeTab === 'customize' ? 'text-grim-cyan drop-shadow-[0_0_5px_rgba(191,0,255,0.8)]' : 'text-gray-500 hover:text-gray-300'
@@ -107,7 +101,6 @@ export default function ConfiguratorPage() {
                   Select Keys
                 </button>
               </div>
-
               {/* Tab Content */}
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                 {activeTab === 'customize' && <ControlPanel />}
@@ -118,9 +111,9 @@ export default function ConfiguratorPage() {
         </div>
       </div>
 
-      {/* Top Instructions Bar - Floating HUD */}
-      <div className="absolute top-28 left-1/2 transform -translate-x-1/2 pointer-events-none">
-        <div className="bg-grim-panel/60 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)] pointer-events-auto flex gap-8 items-center">
+      {/* Top Instructions Bar — desktop only */}
+      <div className="hidden sm:block absolute top-28 left-1/2 transform -translate-x-1/2 pointer-events-none">
+        <div className="bg-grim-panel/60 backdrop-blur-md px-4 sm:px-6 py-2 rounded-full border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)] pointer-events-auto flex gap-4 sm:gap-8 items-center">
           <div className="flex items-center space-x-2 text-[10px] font-mono font-bold text-grim-text-muted">
             <span className="text-grim-cyan bg-grim-cyan/10 px-1.5 py-0.5 rounded border border-grim-cyan/20">R-CLICK</span>
             <span className="tracking-wider">ROTATE</span>
@@ -138,32 +131,93 @@ export default function ConfiguratorPage() {
         </div>
       </div>
 
+      {/* ═══════════════════════════════════════════════════════════════
+          MOBILE/TABLET LAYOUT (<1024px) — Bottom drawer
+          ═══════════════════════════════════════════════════════════════ */}
+
+      {/* Mobile Bottom Tab Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30">
+        {/* Drawer */}
+        <div
+          className={`transition-all duration-300 ease-out overflow-hidden ${mobileDrawer ? 'max-h-[60vh] opacity-100' : 'max-h-0 opacity-0'
+            }`}
+        >
+          <div className="bg-grim-panel/95 backdrop-blur-xl border-t border-white/10 overflow-y-auto max-h-[60vh] relative">
+            {/* Close button */}
+            <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-2 bg-grim-panel/95 backdrop-blur-xl border-b border-white/5">
+              <span className="text-xs font-display font-bold text-grim-cyan uppercase tracking-widest">
+                {mobileDrawer === 'layers' && 'Layers'}
+                {mobileDrawer === 'customize' && 'Customize'}
+                {mobileDrawer === 'select' && 'Select Keys'}
+              </span>
+              <button
+                onClick={() => setMobileDrawer(null)}
+                className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4">
+              {mobileDrawer === 'layers' && <LayerPanel />}
+              {mobileDrawer === 'customize' && <ControlPanel />}
+              {mobileDrawer === 'select' && <KeySelectionPanel />}
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Bar */}
+        <div className="bg-grim-panel/95 backdrop-blur-xl border-t border-white/10 px-2 py-2 flex items-center justify-around gap-1 safe-area-bottom">
+          {[
+            { id: 'layers', icon: Layers, label: 'Layers' },
+            { id: 'customize', icon: Sliders, label: 'Customize' },
+            { id: 'select', icon: MousePointerClick, label: 'Select' },
+          ].map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => toggleDrawer(id)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 px-2 rounded-lg transition-all duration-200 ${mobileDrawer === id
+                ? 'text-grim-cyan bg-grim-cyan/10 border border-grim-cyan/20'
+                : 'text-gray-500 hover:text-gray-300 border border-transparent'
+                }`}
+            >
+              {mobileDrawer === id ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <Icon className="w-4 h-4" />
+              )}
+              <span className="text-[9px] font-mono font-bold uppercase tracking-wider">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Save Design Modal */}
       <SaveDesignModal
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
       />
 
-      {/* Save Design Button - Unique Glitch Style */}
+      {/* Save Design Button — responsive positioning */}
       <button
         onClick={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          console.log('Save Design clicked!')
           setShowSaveModal(true)
         }}
-        className="fixed top-24 right-8 z-[9999] group pointer-events-auto cursor-pointer"
+        className="fixed top-20 sm:top-24 right-3 sm:right-8 z-[9999] group pointer-events-auto cursor-pointer"
       >
         <div className="relative">
           {/* Glitch Layers */}
-          <div className="absolute inset-0 bg-grim-cyan translate-x-1 translate-y-1 opacity-0 group-hover:opacity-70 transition-opacity duration-100 clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px] pointer-events-none" style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}></div>
-          <div className="absolute inset-0 bg-grim-pink -translate-x-1 -translate-y-1 opacity-0 group-hover:opacity-70 transition-opacity duration-100 clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px] pointer-events-none" style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}></div>
+          <div className="absolute inset-0 bg-grim-cyan translate-x-1 translate-y-1 opacity-0 group-hover:opacity-70 transition-opacity duration-100 pointer-events-none" style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}></div>
+          <div className="absolute inset-0 bg-grim-pink -translate-x-1 -translate-y-1 opacity-0 group-hover:opacity-70 transition-opacity duration-100 pointer-events-none" style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}></div>
 
           {/* Main Button */}
-          <div className="relative px-6 py-2 bg-white hover:bg-white text-black font-black uppercase tracking-widest text-xs clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px] transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] z-10 flex items-center gap-2 pointer-events-none"
+          <div className="relative px-3 sm:px-6 py-2 bg-white hover:bg-white text-black font-black uppercase tracking-widest text-[10px] sm:text-xs transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)] z-10 flex items-center gap-2 pointer-events-none"
             style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 10px)' }}>
             <Save className="w-3 h-3" />
-            <span>Save Configuration</span>
+            <span className="hidden sm:inline">Save Configuration</span>
+            <span className="sm:hidden">Save</span>
           </div>
         </div>
       </button>

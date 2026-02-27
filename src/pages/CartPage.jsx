@@ -48,7 +48,7 @@ export default function CartPage() {
               <ShoppingBag className="w-10 h-10 text-grim-cyan relative z-10" />
             </div>
             
-            <h2 className="text-4xl font-display font-black text-white uppercase tracking-widest mb-4">CART_EMPTY</h2>
+            <h2 className="text-2xl sm:text-4xl font-display font-black text-white uppercase tracking-widest mb-4">CART_EMPTY</h2>
             <p className="text-gray-500 font-mono text-sm mb-12 uppercase tracking-[0.2em]">No equipment detected in staging area</p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -98,7 +98,7 @@ export default function CartPage() {
             <div className="inline-block mb-4 px-4 py-1 bg-grim-cyan/10 border border-grim-cyan/30 rounded-none transform skew-x-[-10deg]">
               <span className="font-mono text-grim-cyan text-xs tracking-[0.3em] font-bold transform skew-x-[10deg] inline-block uppercase">STAGING_AREA // UNIT_MANIFEST</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-display font-black text-white uppercase tracking-tighter italic leading-none">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-display font-black text-white uppercase tracking-tighter italic leading-none">
               SHOPPING <span className="text-transparent bg-clip-text bg-gradient-to-r from-grim-cyan to-grim-purple">CART</span>
             </h1>
             <p className="text-gray-500 font-mono text-xs uppercase tracking-[0.25em] mt-4 flex items-center gap-3">
@@ -201,7 +201,7 @@ export default function CartPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-grim-panel border border-grim-cyan/20 p-8 sticky top-32 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+            <div className="bg-grim-panel border border-grim-cyan/20 p-4 sm:p-6 lg:p-8 lg:sticky lg:top-32 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-grim-cyan via-grim-purple to-grim-cyan"></div>
               
               <h2 className="text-2xl font-display font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">
