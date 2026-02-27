@@ -76,3 +76,296 @@
     border-radius: 4px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOADING SCREEN
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Overlay */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #050505;
+  overflow: hidden;
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Animated gradient backdrop */
+.loading-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(0,255,204,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 20% 80%, rgba(147,51,234,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 30% 50% at 80% 20%, rgba(59,130,246,0.07) 0%, transparent 60%);
+  animation: loading-bg-pulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes loading-bg-pulse {
+  0%   { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 1;   transform: scale(1.04); }
+}
+
+/* Scanline sweep */
+.loading-scanline {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 255, 204, 0.015) 3px,
+    rgba(0, 255, 204, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.loading-scanline::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 120px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 255, 204, 0.06) 50%,
+    transparent 100%
+  );
+  animation: scanline-sweep 3.5s linear infinite;
+  top: -120px;
+}
+
+@keyframes scanline-sweep {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(calc(100vh + 120px)); }
+}
+
+/* Corner decorations */
+.loading-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  z-index: 2;
+}
+
+.loading-corner.top-left    { top: 20px;    left: 20px;  border-top: 2px solid #00ffcc;  border-left: 2px solid #00ffcc; }
+.loading-corner.top-right   { top: 20px;    right: 20px; border-top: 2px solid #00ffcc;  border-right: 2px solid #00ffcc; }
+.loading-corner.bottom-left { bottom: 20px; left: 20px;  border-bottom: 2px solid #00ffcc; border-left: 2px solid #00ffcc; }
+.loading-corner.bottom-right{ bottom: 20px; right: 20px; border-bottom: 2px solid #00ffcc; border-right: 2px solid #00ffcc; }
+
+/* Brand */
+.loading-brand {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  margin-bottom: 2.5rem;
+  z-index: 2;
+  animation: brand-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.loading-brand-grim {
+  color: #00ffcc;
+  text-shadow: 0 0 16px rgba(0,255,204,0.8), 0 0 40px rgba(0,255,204,0.3);
+}
+
+.loading-brand-caps {
+  color: #ffffff;
+  margin-left: 0.5em;
+}
+
+@keyframes brand-in {
+  from { opacity: 0; letter-spacing: 0.6em; }
+  to   { opacity: 1; letter-spacing: 0.3em; }
+}
+
+/* ─── Keyboard Grid ─────────────────────────────────────────────────────────── */
+
+.loading-keyboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 6px;
+  width: min(600px, 90vw);
+  margin-bottom: 2.5rem;
+  z-index: 2;
+}
+
+.loading-key-wrapper {
+  aspect-ratio: 1;
+}
+
+/* Keycap tile */
+.keycap-tile {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transform: scale(0.6) translateY(8px);
+  animation: key-boot 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transition: filter 0.2s ease;
+}
+
+@keyframes key-boot {
+  from {
+    opacity: 0;
+    transform: scale(0.5) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.keycap-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Key body (outer shadow/border) */
+.key-body {
+  fill: #0f0f0f;
+  stroke: rgba(0,255,204,0.12);
+  stroke-width: 0.5;
+}
+
+/* Key top face */
+.key-face {
+  fill: #1a1a1a;
+  stroke: rgba(255,255,255,0.05);
+  stroke-width: 0.5;
+  transition: fill 0.3s ease;
+}
+
+.keycap-tile[data-lit='true'] .key-face {
+  fill: #0d2b24;
+  stroke: rgba(0,255,204,0.5);
+  stroke-width: 0.8;
+}
+
+/* Key legend */
+.key-label {
+  fill: rgba(255,255,255,0.15);
+  font-family: 'Orbitron', monospace;
+  font-size: 7px;
+  font-weight: 700;
+  dominant-baseline: middle;
+  transition: fill 0.3s ease;
+}
+
+.keycap-tile[data-lit='true'] .key-label {
+  fill: #00ffcc;
+  filter: drop-shadow(0 0 3px rgba(0,255,204,0.9));
+}
+
+/* Glow layer */
+.key-glow-layer {
+  fill: transparent;
+  opacity: 0;
+  transition: opacity 0.3s ease, fill 0.3s ease;
+}
+
+.keycap-tile[data-lit='true'] .key-glow-layer {
+  fill: rgba(0,255,204,0.08);
+  opacity: 1;
+}
+
+/* Outer key glow when lit */
+.keycap-tile[data-lit='true'] {
+  filter: drop-shadow(0 0 4px rgba(0,255,204,0.6));
+}
+
+/* ─── Progress Bar ─────────────────────────────────────────────────────────── */
+
+.loading-bar-container {
+  width: min(600px, 90vw);
+  margin-bottom: 1rem;
+  z-index: 2;
+}
+
+.loading-bar-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: visible;
+}
+
+.loading-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ffcc 0%, #3b82f6 60%, #9333ea 100%);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 12px rgba(0,255,204,0.6), 0 0 24px rgba(0,255,204,0.2);
+  min-width: 2px;
+}
+
+.loading-bar-head {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: #00ffcc;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px 4px rgba(0,255,204,0.8);
+  transition: left 0.1s linear;
+}
+
+/* ─── Status Row ───────────────────────────────────────────────────────────── */
+
+.loading-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(600px, 90vw);
+  margin-top: 0.5rem;
+  z-index: 2;
+}
+
+.loading-message {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: rgba(0, 255, 204, 0.85);
+  text-shadow: 0 0 8px rgba(0,255,204,0.4);
+}
+
+.loading-cursor {
+  animation: cursor-blink 0.8s step-end infinite;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 0; }
+}
+
+.loading-percent {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sub-label */
+.loading-sublabel {
+  margin-top: 0.6rem;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.5rem;
+  letter-spacing: 0.35em;
+  color: rgba(255,255,255,0.15);
+  z-index: 2;
+}

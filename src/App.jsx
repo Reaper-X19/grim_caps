@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Layout from './components/layout/Layout'
+import LoadingScreen from './components/layout/LoadingScreen'
 import HomePage from './pages/HomePage'
 import ConfiguratorPage from './pages/ConfiguratorPage'
 import AboutPage from './pages/AboutPage'
@@ -15,12 +16,29 @@ import PlaygroundPage from './pages/PlaygroundPage'
 import { onAuthStateChange } from './services/auth'
 import useAuthStore from './store/authStore'
 
+// Show loader only on hard refresh / first page load within the tab session
+const LOADER_KEY = 'grim_loader_shown'
+
+
 gsap.registerPlugin(ScrollTrigger)
 
 function App() {
   const location = useLocation()
   const setSession = useAuthStore(state => state.setSession)
   const setLoading = useAuthStore(state => state.setLoading)
+
+  // Show loader only on hard refresh (not on SPA navigation)
+  const [showLoader, setShowLoader] = useState(() => {
+    const alreadyShown = sessionStorage.getItem(LOADER_KEY)
+    return !alreadyShown
+  })
+  const [appReady, setAppReady] = useState(() => !!sessionStorage.getItem(LOADER_KEY))
+
+  const handleLoaderComplete = () => {
+    sessionStorage.setItem(LOADER_KEY, '1')
+    setShowLoader(false)
+    setAppReady(true)
+  }
 
   // Initialize auth state
   useEffect(() => {
@@ -89,20 +107,34 @@ function App() {
   }, [location.pathname])
 
   return (
-    <Layout>
-      <div className="page-transition">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/configurator" element={<ConfiguratorPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/gallery" element={<GalleryPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/my-designs" element={<MyDesignsPage />} />
-          <Route path="/playground" element={<PlaygroundPage />} />
-        </Routes>
+    <>
+      {/* Loading screen — fixed overlay, only on hard refresh */}
+      {showLoader && <LoadingScreen onComplete={handleLoaderComplete} />}
+
+      {/* Main app — fade in after loader exits */}
+      <div
+        style={{
+          opacity: appReady ? 1 : 0,
+          transition: 'opacity 0.5s ease',
+          visibility: appReady ? 'visible' : 'hidden',
+        }}
+      >
+        <Layout>
+          <div className="page-transition">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/configurator" element={<ConfiguratorPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/gallery" element={<GalleryPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/my-designs" element={<MyDesignsPage />} />
+              <Route path="/playground" element={<PlaygroundPage />} />
+            </Routes>
+          </div>
+        </Layout>
       </div>
-    </Layout>
+    </>
   )
 }
 
