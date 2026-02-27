@@ -15,11 +15,11 @@ export default function KeyboardModel({ introComplete = false }) {
   const { camera, raycaster, pointer, gl } = useThree()
 
   const { posX, posY, posZ, rotX, rotY, rotZ, kbScale } = useControls('Keyboard', {
-    posX:    { value: 0,      min: -5,    max: 5,    step: 0.001 },
+    posX:    { value: 0.75,   min: -5,    max: 5,    step: 0.001 },
     posY:    { value: 0.61,   min: -5,    max: 5,    step: 0.001 },
     posZ:    { value: -2.5,   min: -5,    max: 5,    step: 0.001 },
     rotX:    { value: 0.30,   min: -1.57, max: 1.57, step: 0.001 },
-    rotY:    { value: 0.01,   min: -1.57, max: 1.57, step: 0.001 },
+    rotY:    { value: 0,      min: -1.57, max: 1.57, step: 0.001 },
     rotZ:    { value: 0,      min: -1.57, max: 1.57, step: 0.001 },
     kbScale: { value: 30.5,   min: 1,     max: 50,   step: 0.1   },
   })
