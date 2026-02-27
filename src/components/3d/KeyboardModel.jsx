@@ -10,7 +10,7 @@ import {
   calculateKeysBoundingBox
 } from '../../shaders/KeycapShader'
 
-export default function KeyboardModel({ introComplete = false }) {
+export default function KeyboardModel({ introComplete = false, onTextureReady }) {
   const groupRef = useRef()
   const { camera, raycaster, pointer, gl } = useThree()
 
@@ -125,9 +125,6 @@ export default function KeyboardModel({ introComplete = false }) {
   useEffect(() => {
     if (!groupRef.current) return
 
-    // ── GUARD: Don't apply textures until intro animation is done ──
-    // During animation, matrixWorld is mid-tween so world-space UV bounds would be wrong.
-    // We still allow selection highlighting (emissive glow) since that doesn't need bounds.
     if (!introComplete) {
       // Only handle selection highlighting during intro
       groupRef.current.traverse((child) => {
@@ -329,8 +326,10 @@ export default function KeyboardModel({ introComplete = false }) {
         child.material.needsUpdate = true
       }
     })
+    // Signal that textures/materials have been applied
+    if (onTextureReady) onTextureReady()
   }, [
-    introComplete,  // ← NEW: re-run when animation completes
+    introComplete,
     selectedKeys,
     keyCustomizations,
     activeLayer?.baseColor,

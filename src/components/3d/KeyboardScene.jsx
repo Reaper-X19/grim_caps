@@ -98,55 +98,48 @@ function IntroWrapper({ onComplete }) {
   )
 }
 
-// ─── IntroWrapper with state ──────────────────────────────────────────────────
-// Wraps IntroWrapper to manage the introComplete state
+// ─── AnimatedKeyboard ─────────────────────────────────────────────────────────
+// Passes introComplete=true immediately (textures apply first),
+// then starts GSAP animation after KeyboardModel signals onTextureReady.
 function AnimatedKeyboard() {
-  const [introComplete, setIntroComplete] = useState(false)
-  const wrapperRef = useRef()
+  const ref = useRef()
+  const tlRef = useRef(null)
+  const [textureReady, setTextureReady] = useState(false)
+  const animStartedRef = useRef(false)
 
-  const handleComplete = useCallback(() => {
-    setIntroComplete(true)
+  const handleTextureReady = useCallback(() => {
+    setTextureReady(true)
   }, [])
 
-  // When introComplete changes, re-render the inner KeyboardModel with the flag
-  // We need to reach into the wrapper's child to update the prop
+  // Start GSAP only after texture is ready
   useEffect(() => {
-    // introComplete is now managed via the shared state
-  }, [introComplete])
-
-  return <IntroWrapperWithModel introComplete={introComplete} onComplete={handleComplete} />
-}
-
-// Combined wrapper that passes introComplete to KeyboardModel
-function IntroWrapperWithModel({ introComplete, onComplete }) {
-  const ref = useRef()
-
-  useEffect(() => {
-    if (!ref.current) return
+    if (!textureReady || !ref.current || animStartedRef.current) return
+    animStartedRef.current = true
     const g = ref.current
 
     // Set start state
     g.position.set(WRAP.px, WRAP.py, WRAP.pz)
     g.rotation.set(WRAP.rx, WRAP.ry, WRAP.rz)
     g.scale.setScalar(WRAP.s)
+    g.visible = true
 
-    // ── GSAP timeline: WRAP → identity ────────────────────────────────────
-    const tl = gsap.timeline({
-      onComplete: () => {
-        if (onComplete) onComplete()
-      }
-    })
-
+    const tl = gsap.timeline()
     tl.to(g.position, { x: 0, y: 0, z: 0, duration: 3.6, ease: 'power4.out' }, 0)
     tl.to(g.rotation, { x: 0, y: 0, z: 0, duration: 3.2, ease: 'power3.out' }, 0)
     tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.8, ease: 'power4.out' }, 0.15)
+    tlRef.current = tl
 
     return () => { tl.kill() }
-  }, []) // Only run once on mount
+  }, [textureReady])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { if (tlRef.current) tlRef.current.kill() }
+  }, [])
 
   return (
-    <group ref={ref}>
-      <KeyboardModel introComplete={introComplete} />
+    <group ref={ref} visible={false}>
+      <KeyboardModel introComplete={true} onTextureReady={handleTextureReady} />
     </group>
   )
 }
