@@ -27,8 +27,8 @@ export default function AboutPage() {
         </div>
 
         {/* Glowing Orbs */}
-        <div className="absolute top-20 right-[-10%] w-[600px] h-[600px] bg-grim-cyan/10 rounded-full blur-[120px] animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-grim-purple/10 rounded-full blur-[120px] animate-pulse-slow delay-1000"></div>
+
+
 
         {/* Vignette */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#030014_100%)]"></div>

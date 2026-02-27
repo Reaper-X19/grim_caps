@@ -30,8 +30,8 @@ export default function ConfiguratorPage() {
             backgroundSize: '50px 50px',
           }}>
         </div>
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-grim-purple/20 rounded-full blur-[100px] animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-grim-cyan/20 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
+
+
       </div>
 
       {/* 2. Deep Vignette */}

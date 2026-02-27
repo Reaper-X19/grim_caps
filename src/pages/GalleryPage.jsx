@@ -200,8 +200,8 @@ export default function GalleryPage() {
         </div>
 
         {/* Glowing Orbs */}
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-grim-purple/10 rounded-full blur-[100px] animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-grim-cyan/10 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
+
+
 
         {/* Vignette */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,#05000a_100%)]"></div>

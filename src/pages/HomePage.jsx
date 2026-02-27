@@ -93,7 +93,7 @@ export default function HomePage() {
 
         {/* Content Overlay - Pinned to corners, clear of keyboard */}
         <div className="absolute inset-0 z-20 w-full h-full pointer-events-none">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between py-20 sm:py-24 md:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between pt-16 sm:pt-20 pb-16 sm:pb-12">
 
             {/* Top-Left: Title — pinned high to avoid keyboard */}
             <div className="flex justify-center md:justify-start pointer-events-auto">
@@ -105,8 +105,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Spacer — pushes CTA below keyboard center */}
-            <div className="flex-1 min-h-[30vh] sm:min-h-[35vh] md:min-h-[40vh]"></div>
+            {/* Spacer — pushes CTA well below keyboard */}
+            <div className="flex-1"></div>
 
             {/* Bottom-Right: Subtitle & CTA — pinned low */}
             <div className="flex justify-center md:justify-end pointer-events-auto pb-8 sm:pb-4">
