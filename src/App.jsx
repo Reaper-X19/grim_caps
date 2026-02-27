@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Layout from './components/layout/Layout'
@@ -16,35 +15,39 @@ import PlaygroundPage from './pages/PlaygroundPage'
 import { onAuthStateChange } from './services/auth'
 import useAuthStore from './store/authStore'
 
-// Show loader only on hard refresh / first page load within the tab session
-const LOADER_KEY = 'grim_loader_shown'
-
-
 gsap.registerPlugin(ScrollTrigger)
 
+// ─── Module-level flag ───────────────────────────────────────────────────────
+// Using a module-level variable (not sessionStorage) means:
+//   • Any page reload — F5 OR Ctrl+Shift+R — reloads the JS module and resets
+//     this to false → loader shows every time the user refreshes.
+//   • SPA navigation (React Router link clicks) does NOT reload the module,
+//     so the flag stays true → loader skips on in-app navigation.
+let loaderHasRun = false
+
+// ─── App ─────────────────────────────────────────────────────────────────────
 function App() {
   const location = useLocation()
   const setSession = useAuthStore(state => state.setSession)
   const setLoading = useAuthStore(state => state.setLoading)
 
-  // Show loader only on hard refresh (not on SPA navigation)
-  const [showLoader, setShowLoader] = useState(() => {
-    const alreadyShown = sessionStorage.getItem(LOADER_KEY)
-    return !alreadyShown
-  })
-  const [appReady, setAppReady] = useState(() => !!sessionStorage.getItem(LOADER_KEY))
+  // showLoader: true only on fresh page load / any refresh (F5 included)
+  const [showLoader, setShowLoader] = useState(!loaderHasRun)
+  // appReady: gates the rendering of ALL page content.
+  // Pages only mount AFTER the loader exits, so every entrance animation
+  // fires fresh — user always sees hero animations, scroll reveals, etc.
+  const [appReady, setAppReady] = useState(loaderHasRun)
 
   const handleLoaderComplete = () => {
-    sessionStorage.setItem(LOADER_KEY, '1')
+    loaderHasRun = true       // mark for this browser tab session (in memory)
     setShowLoader(false)
     setAppReady(true)
   }
 
-  // Initialize auth state
+  // Initialize Supabase auth
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Get initial session
         const { getCurrentSession } = await import('./services/auth')
         const { session } = await getCurrentSession()
         setSession(session)
@@ -56,10 +59,8 @@ function App() {
       }
     }
 
-    // Initialize auth
     initAuth()
 
-    // Listen to auth state changes
     const subscription = onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event)
       setSession(session)
@@ -67,58 +68,41 @@ function App() {
     })
 
     return () => {
-      if (subscription?.unsubscribe) {
-        subscription.unsubscribe()
-      }
+      if (subscription?.unsubscribe) subscription.unsubscribe()
     }
   }, [setSession, setLoading])
 
-  // Scroll to top and refresh ScrollTrigger on route change
+  // Scroll to top + refresh ScrollTrigger on SPA route change
   useEffect(() => {
+    if (!appReady) return
     window.scrollTo(0, 0)
-
-    // Small delay to let DOM update, then refresh ScrollTrigger
-    const timer = setTimeout(() => {
-      ScrollTrigger.refresh()
-    }, 100)
-
+    const timer = setTimeout(() => ScrollTrigger.refresh(), 100)
     return () => clearTimeout(timer)
-  }, [location.pathname])
+  }, [location.pathname, appReady])
 
-  // Page transition animation - ensure it always completes
-  // SKIP for configurator page: setting opacity to 0 during Three.js Canvas
-  // initialization causes WebGL context loss on hard reload
+  // Page transition fade on SPA navigation (skip for configurator — WebGL)
   useEffect(() => {
+    if (!appReady) return
     const pageTransition = document.querySelector('.page-transition')
-    if (pageTransition) {
-      if (location.pathname === '/configurator') {
-        // Immediately visible — don't hide while WebGL initializes
-        gsap.set(pageTransition, { opacity: 1 })
-      } else {
-        // Set to 0 immediately, then animate to 1
-        gsap.set(pageTransition, { opacity: 0 })
-        gsap.to(pageTransition, {
-          opacity: 1,
-          duration: 0.4,
-          ease: 'power2.out'
-        })
-      }
+    if (!pageTransition) return
+
+    if (location.pathname === '/configurator') {
+      gsap.set(pageTransition, { opacity: 1 })
+    } else {
+      gsap.set(pageTransition, { opacity: 0 })
+      gsap.to(pageTransition, { opacity: 1, duration: 0.4, ease: 'power2.out' })
     }
-  }, [location.pathname])
+  }, [location.pathname, appReady])
 
   return (
     <>
-      {/* Loading screen — fixed overlay, only on hard refresh */}
+      {/* Loading screen — renders on top, fires on every page refresh */}
       {showLoader && <LoadingScreen onComplete={handleLoaderComplete} />}
 
-      {/* Main app — fade in after loader exits */}
-      <div
-        style={{
-          opacity: appReady ? 1 : 0,
-          transition: 'opacity 0.5s ease',
-          visibility: appReady ? 'visible' : 'hidden',
-        }}
-      >
+      {/* Main app — only mounts AFTER loader exits.
+          This guarantees every page's useGSAP / useEffect entrance animation
+          fires fresh and the user actually sees it. */}
+      {appReady && (
         <Layout>
           <div className="page-transition">
             <Routes>
@@ -133,7 +117,7 @@ function App() {
             </Routes>
           </div>
         </Layout>
-      </div>
+      )}
     </>
   )
 }
