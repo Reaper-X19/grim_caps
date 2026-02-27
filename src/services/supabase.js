@@ -169,11 +169,57 @@ export async function deleteDesign(designId) {
 }
 
 // ============================================================================
+// RETRY UTILITY
+// ============================================================================
+
+/**
+ * Wrap an async function with retry logic and timeout
+ * @param {Function} fn - Async function to retry
+ * @param {Object} opts - { retries, timeoutMs, backoffMs }
+ * @returns {Promise<*>}
+ */
+async function withRetry(fn, { retries = 2, timeoutMs = 8000, backoffMs = 1000 } = {}) {
+  let lastError
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Race the fn against a timeout
+      const result = await Promise.race([
+        fn(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Request timed out — Supabase may be slow to respond. Try again.')), timeoutMs)
+        ),
+      ])
+      return result
+    } catch (err) {
+      lastError = err
+      const isNetworkError =
+        err.message?.includes('Failed to fetch') ||
+        err.message?.includes('timed out') ||
+        err.message?.includes('NetworkError') ||
+        err.message?.includes('ERR_NAME_NOT_RESOLVED')
+
+      // Only retry on transient network errors
+      if (!isNetworkError || attempt === retries) break
+
+      // Exponential backoff
+      await new Promise(r => setTimeout(r, backoffMs * (attempt + 1)))
+    }
+  }
+
+  // Provide a user-friendly message for network errors
+  if (lastError?.message?.includes('Failed to fetch') || lastError?.message?.includes('NetworkError')) {
+    throw new Error('Network error — could not reach the server. Check your internet connection and try again.')
+  }
+  throw lastError
+}
+
+// ============================================================================
 // GALLERY QUERIES
 // ============================================================================
 
 /**
  * Fetch public designs for gallery with filters
+ * Includes automatic retry on network failures
  * @param {Object} options - Query options
  * @returns {Promise<Array>} Array of designs
  */
@@ -184,45 +230,47 @@ export async function fetchGalleryDesigns({
   limit = 20,
   offset = 0
 } = {}) {
-  let query = supabase
-    .from('user_designs')
-    .select('*')
-    .eq('is_public', true)
+  return withRetry(async () => {
+    let query = supabase
+      .from('user_designs')
+      .select('*')
+      .eq('is_public', true)
 
-  // Apply category filter
-  if (category && category !== 'all') {
-    query = query.eq('category', category)
-  }
+    // Apply category filter
+    if (category && category !== 'all') {
+      query = query.eq('category', category)
+    }
 
-  // Apply sorting
-  switch (sortBy) {
-    case 'newest':
-      query = query.order('created_at', { ascending: false })
-      break
-    case 'liked':
-      query = query.order('likes_count', { ascending: false })
-      break
-    case 'copied':
-      query = query.order('copy_count', { ascending: false })
-      break
-    case 'featured':
-      query = query.eq('is_featured', true).order('created_at', { ascending: false })
-      break
-    default:
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' })
-  }
+    // Apply sorting
+    switch (sortBy) {
+      case 'newest':
+        query = query.order('created_at', { ascending: false })
+        break
+      case 'liked':
+        query = query.order('likes_count', { ascending: false })
+        break
+      case 'copied':
+        query = query.order('copy_count', { ascending: false })
+        break
+      case 'featured':
+        query = query.eq('is_featured', true).order('created_at', { ascending: false })
+        break
+      default:
+        query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+    }
 
-  // Apply pagination
-  query = query.range(offset, offset + limit - 1)
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1)
 
-  const { data, error } = await query
+    const { data, error } = await query
 
-  if (error) {
-    console.error('Error fetching gallery designs:', error)
-    throw new Error(`Failed to fetch designs: ${error.message}`)
-  }
+    if (error) {
+      console.error('Error fetching gallery designs:', error)
+      throw new Error(`Failed to fetch designs: ${error.message}`)
+    }
 
-  return data || []
+    return data || []
+  }, { retries: 2, timeoutMs: 8000, backoffMs: 1500 })
 }
 
 /**

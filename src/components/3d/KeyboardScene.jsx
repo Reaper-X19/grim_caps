@@ -15,8 +15,13 @@
  *   At t=end: outer_pos = [0,0,0], s = 1 → world_pos = Image1_pos
  *
  * OrbitControls target = Image1 world position (keyboard final center).
+ *
+ * CRITICAL: `introComplete` is passed to KeyboardModel so that shader/texture
+ * logic waits until the GSAP animation finishes. This prevents bounding-box
+ * calculations from using mid-tween matrixWorld values, which would produce
+ * wrong UV mappings for the keycap shader.
  */
-import { Suspense, useRef, useEffect } from 'react'
+import { Suspense, useRef, useEffect, useState, useCallback } from 'react'
 import { Canvas } from '@react-three/fiber'
 import {
   OrbitControls,
@@ -53,7 +58,7 @@ const WRAP = {
 // Outer group with NO JSX transform props — only GSAP writes to it.
 // Starts at WRAP values, tweens to identity. KeyboardModel (inner) holds
 // Image1 Leva defaults permanently.
-function IntroWrapper() {
+function IntroWrapper({ onComplete }) {
   const ref = useRef()
 
   useEffect(() => {
@@ -66,7 +71,12 @@ function IntroWrapper() {
     g.scale.setScalar(WRAP.s)
 
     // ── GSAP timeline: WRAP → identity ────────────────────────────────────
-    const tl = gsap.timeline()
+    const tl = gsap.timeline({
+      onComplete: () => {
+        // Signal that animation is done — matrixWorld is now stable
+        if (onComplete) onComplete()
+      }
+    })
 
     // Position float-in: 3.6s, power4.out (explosive start, feather end)
     tl.to(g.position, { x: 0, y: 0, z: 0, duration: 3.6, ease: 'power4.out' }, 0)
@@ -78,12 +88,65 @@ function IntroWrapper() {
     tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.8, ease: 'power4.out' }, 0.15)
 
     return () => { tl.kill() }
-  }, [])
+  }, [onComplete])
 
   // No position/rotation/scale JSX props → React won't override GSAP values
   return (
     <group ref={ref}>
-      <KeyboardModel />
+      <KeyboardModel introComplete={false} />
+    </group>
+  )
+}
+
+// ─── IntroWrapper with state ──────────────────────────────────────────────────
+// Wraps IntroWrapper to manage the introComplete state
+function AnimatedKeyboard() {
+  const [introComplete, setIntroComplete] = useState(false)
+  const wrapperRef = useRef()
+
+  const handleComplete = useCallback(() => {
+    setIntroComplete(true)
+  }, [])
+
+  // When introComplete changes, re-render the inner KeyboardModel with the flag
+  // We need to reach into the wrapper's child to update the prop
+  useEffect(() => {
+    // introComplete is now managed via the shared state
+  }, [introComplete])
+
+  return <IntroWrapperWithModel introComplete={introComplete} onComplete={handleComplete} />
+}
+
+// Combined wrapper that passes introComplete to KeyboardModel
+function IntroWrapperWithModel({ introComplete, onComplete }) {
+  const ref = useRef()
+
+  useEffect(() => {
+    if (!ref.current) return
+    const g = ref.current
+
+    // Set start state
+    g.position.set(WRAP.px, WRAP.py, WRAP.pz)
+    g.rotation.set(WRAP.rx, WRAP.ry, WRAP.rz)
+    g.scale.setScalar(WRAP.s)
+
+    // ── GSAP timeline: WRAP → identity ────────────────────────────────────
+    const tl = gsap.timeline({
+      onComplete: () => {
+        if (onComplete) onComplete()
+      }
+    })
+
+    tl.to(g.position, { x: 0, y: 0, z: 0, duration: 3.6, ease: 'power4.out' }, 0)
+    tl.to(g.rotation, { x: 0, y: 0, z: 0, duration: 3.2, ease: 'power3.out' }, 0)
+    tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 2.8, ease: 'power4.out' }, 0.15)
+
+    return () => { tl.kill() }
+  }, []) // Only run once on mount
+
+  return (
+    <group ref={ref}>
+      <KeyboardModel introComplete={introComplete} />
     </group>
   )
 }
@@ -136,7 +199,7 @@ export default function KeyboardScene() {
         <StudioLights />
 
         <Suspense fallback={null}>
-          <IntroWrapper />
+          <AnimatedKeyboard />
           <Environment
             files="/hdr/studio-small.hdr"
             background={false}

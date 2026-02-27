@@ -10,7 +10,7 @@ import {
   calculateKeysBoundingBox
 } from '../../shaders/KeycapShader'
 
-export default function KeyboardModel() {
+export default function KeyboardModel({ introComplete = false }) {
   const groupRef = useRef()
   const { camera, raycaster, pointer, gl } = useThree()
 
@@ -29,7 +29,8 @@ export default function KeyboardModel() {
   const materialsRef = useRef(new Map())
   const texturesRef = useRef(new Map())
   const originalMaterialsRef = useRef(new Map()) // Store original materials from GLTF
-  const boundingBoxCache = useRef(new WeakMap()) // Cache for calculated bounding boxes
+  // Cache bounding boxes by a stable string key (sorted key names)
+  const boundingBoxCacheRef = useRef(new Map())
 
   // Get state from store
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
@@ -116,9 +117,49 @@ export default function KeyboardModel() {
     }
   }, [camera, raycaster, pointer, gl, toggleKeySelection, selectionMode, selectionLocked])
 
+  // Helper: get a stable cache key for an array of key names
+  const getBoundsCacheKey = (keyNames) => {
+    if (!keyNames || keyNames.length === 0) return ''
+    return [...keyNames].sort().join(',')
+  }
+
   // Apply materials and real-time updates
+  // CRITICAL: Only run texture/shader application after intro animation completes.
+  // During the GSAP animation, matrixWorld is mid-tween → bounding box calculations
+  // would produce wrong world-space UV coordinates → broken shader mapping.
   useEffect(() => {
     if (!groupRef.current) return
+
+    // ── GUARD: Don't apply textures until intro animation is done ──
+    // During animation, matrixWorld is mid-tween so world-space UV bounds would be wrong.
+    // We still allow selection highlighting (emissive glow) since that doesn't need bounds.
+    if (!introComplete) {
+      // Only handle selection highlighting during intro
+      groupRef.current.traverse((child) => {
+        if (child.isMesh && child.name && child.name.startsWith('K_')) {
+          const isSelected = selectedKeys.includes(child.name)
+          if (isSelected && selectionMode && !selectionLocked) {
+            if (!child.material.userData.isModified) {
+              child.material = child.material.clone()
+              child.material.userData.isModified = true
+            }
+            child.material.emissive = new THREE.Color('#00ffcc')
+            child.material.emissiveIntensity = 0.3
+          }
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
+      return
+    }
+
+    // ── Intro complete — safe to calculate bounding boxes and apply textures ──
+
+    // Clear the bounding box cache when intro just completed to force fresh calculation
+    // with the now-stable matrixWorld values
+    if (boundingBoxCacheRef.current.size === 0) {
+      // First run after intro — cache is already empty, good
+    }
 
     // Calculate bounding box for selected keys (for live preview)
     const selectedBounds = calculateKeysBoundingBox(groupRef.current, selectedKeys)
@@ -161,17 +202,20 @@ export default function KeyboardModel() {
           baseColor = customization.baseColor || '#ffffff'
           transforms = customization.textureTransform || transforms
 
-          // Use saved bounding box if available, otherwise calculate from keyGroup with caching
+          // Use saved bounding box if available, otherwise calculate from keyGroup
           if (customization.boundingBox) {
             boundsToUse = customization.boundingBox
           } else if (customization.keyGroup && customization.keyGroup.length > 0) {
-            // Check cache first to avoid expensive recalculation every frame
-            const groupRef = customization.keyGroup
-            if (boundingBoxCache.current.has(groupRef)) {
-              boundsToUse = boundingBoxCache.current.get(groupRef)
+            // FIX: Use stable string key for cache, not array reference (WeakMap
+            // would lose entries when array is GC'd). Also use the component's
+            // groupRef.current (the actual Three.js group), NOT a local variable
+            // that shadows it.
+            const cacheKey = getBoundsCacheKey(customization.keyGroup)
+            if (boundingBoxCacheRef.current.has(cacheKey)) {
+              boundsToUse = boundingBoxCacheRef.current.get(cacheKey)
             } else {
               boundsToUse = calculateKeysBoundingBox(groupRef.current, customization.keyGroup)
-              boundingBoxCache.current.set(groupRef, boundsToUse)
+              boundingBoxCacheRef.current.set(cacheKey, boundsToUse)
             }
           }
 
@@ -291,6 +335,7 @@ export default function KeyboardModel() {
       }
     })
   }, [
+    introComplete,  // ← NEW: re-run when animation completes
     selectedKeys,
     keyCustomizations,
     activeLayer?.baseColor,

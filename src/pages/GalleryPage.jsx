@@ -25,27 +25,27 @@ export default function GalleryPage() {
   const user = useAuthStore(state => state.user)
 
   // Fetch designs from Supabase
-  useEffect(() => {
-    async function fetchDesigns() {
-      try {
-        setLoading(true)
-        setError(null)
-        
-        const data = await fetchGalleryDesigns({
-          limit: 50,
-          sortBy: 'created_at'
-        })
-        
-        setDesigns(data || [])
-      } catch (err) {
-        console.error('Error fetching designs:', err)
-        setError(err.message || 'Failed to load designs')
-      } finally {
-        setLoading(false)
-      }
+  const loadDesigns = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const data = await fetchGalleryDesigns({
+        limit: 50,
+        sortBy: 'created_at'
+      })
+      
+      setDesigns(data || [])
+    } catch (err) {
+      console.error('Error fetching designs:', err)
+      setError(err.message || 'Failed to load designs')
+    } finally {
+      setLoading(false)
     }
-    
-    fetchDesigns()
+  }
+
+  useEffect(() => {
+    loadDesigns()
   }, [])
 
   // Load user's liked designs on mount and when user changes
@@ -250,7 +250,7 @@ export default function GalleryPage() {
               <p className="text-red-400 text-xl mb-2">Failed to load designs</p>
               <p className="text-gray-500 text-sm">{error}</p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={loadDesigns}
                 className="mt-6 px-6 py-3 bg-grim-accent text-black font-semibold rounded-lg hover:bg-grim-accent/90 transition-all"
               >
                 Retry
