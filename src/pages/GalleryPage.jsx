@@ -211,7 +211,7 @@ export default function GalleryPage() {
         {/* Hero Section */}
         <section className="relative pt-32 pb-16 flex items-center justify-center overflow-hidden">
           <div className="text-center px-4 max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-display font-black mb-6 uppercase tracking-widest relative inline-block pb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-6xl font-display font-black mb-6 uppercase tracking-widest relative inline-block pb-4">
               <span className="absolute inset-0 text-grim-cyan blur-[2px] opacity-70 animate-pulse-slow">COMMUNITY_GRID</span>
               <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-white via-grim-cyan to-grim-purple">
                 COMMUNITY_GRID

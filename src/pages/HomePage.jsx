@@ -36,16 +36,16 @@ export default function HomePage() {
   // Dynamic hero camera — scales keyboard for all screen sizes
   const [heroCam, setHeroCam] = useState(() => {
     const w = typeof window !== 'undefined' ? window.innerWidth : 1440
-    if (w < 640)  return { pos: [0, 0, 6.5], fov: 62 }  // phones
-    if (w < 1024) return { pos: [0, 0, 5.0], fov: 52 }  // tablets / small laptops
+    if (w < 640)  return { pos: [0, 0, 4.5], fov: 50 }  // phones
+    if (w < 1024) return { pos: [0, 0, 4.2], fov: 48 }  // tablets / small laptops
     return { pos: [0, 0, 4], fov: 45 }                   // desktops
   })
 
   useEffect(() => {
     const update = () => {
       const w = window.innerWidth
-      if (w < 640)       setHeroCam({ pos: [0, 0, 6.5], fov: 62 })
-      else if (w < 1024) setHeroCam({ pos: [0, 0, 5.0], fov: 52 })
+      if (w < 640)       setHeroCam({ pos: [0, 0, 4.5], fov: 50 })
+      else if (w < 1024) setHeroCam({ pos: [0, 0, 4.2], fov: 48 })
       else               setHeroCam({ pos: [0, 0, 4],   fov: 45 })
     }
     window.addEventListener('resize', update)

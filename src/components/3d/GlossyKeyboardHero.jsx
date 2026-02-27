@@ -229,7 +229,7 @@ export default function GlossyKeyboardHero({ mouse }) {
   })
 
   return (
-    <group ref={introRef}>
+    <group ref={introRef} position={[0, 4.5, 0]} rotation={[0.3, 0, 0.6]} scale={0.7}>
       <group position={[posX, posY, posZ]}>
         <group ref={modelRef} scale={scale}>
           <KeyboardGlossyModel />
