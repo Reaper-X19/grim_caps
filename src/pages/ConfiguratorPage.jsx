@@ -61,7 +61,7 @@ export default function ConfiguratorPage() {
           ═══════════════════════════════════════════════════════════════ */}
 
       {/* Floating Left Panel - Layers */}
-      <div className="hidden lg:block absolute left-8 top-28 bottom-8 w-80 pointer-events-none perspective-[1000px]">
+      <div className="hidden xl:block absolute left-8 top-28 bottom-8 w-80 pointer-events-none perspective-[1000px]">
         <div className="h-full flex flex-col pointer-events-auto transform transition-transform hover:translate-x-1 duration-300">
           <div className="bg-grim-panel/80 backdrop-blur-xl p-0 rounded-xl shadow-[0_0_30px_rgba(176,38,255,0.15)] max-h-full overflow-y-auto border border-white/5 flex flex-col h-full relative group overflow-hidden">
             <div className="absolute inset-0 rounded-xl border border-transparent bg-gradient-to-br from-grim-cyan/30 via-transparent to-grim-purple/30 opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ maskImage: 'linear-gradient(black, black)', WebkitMaskImage: 'linear-gradient(black, black)', maskComposite: 'exclude', WebkitMaskComposite: 'xor' }}></div>
@@ -74,7 +74,7 @@ export default function ConfiguratorPage() {
       </div>
 
       {/* Floating Right Panel - Controls */}
-      <div className="hidden lg:block absolute right-8 top-28 bottom-8 w-80 pointer-events-none z-10 perspective-[1000px]">
+      <div className="hidden xl:block absolute right-8 top-28 bottom-8 w-80 pointer-events-none z-10 perspective-[1000px]">
         <div className="h-full flex flex-col pointer-events-auto transform transition-transform hover:-translate-x-1 duration-300">
           <div className="bg-grim-panel/80 backdrop-blur-xl p-0 rounded-xl shadow-[0_0_30px_rgba(0,240,255,0.15)] max-h-full overflow-hidden border border-white/5 flex flex-col h-full relative group">
             <div className="absolute inset-0 rounded-xl border border-transparent bg-gradient-to-bl from-grim-pink/30 via-transparent to-grim-cyan/30 opacity-50 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
@@ -136,7 +136,7 @@ export default function ConfiguratorPage() {
           ═══════════════════════════════════════════════════════════════ */}
 
       {/* Mobile Bottom Tab Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30">
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 z-30">
         {/* Drawer */}
         <div
           className={`transition-all duration-300 ease-out overflow-hidden ${mobileDrawer ? 'max-h-[60vh] opacity-100' : 'max-h-0 opacity-0'

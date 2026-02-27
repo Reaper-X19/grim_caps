@@ -189,7 +189,7 @@ function useResponsiveCamera() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
   return isMobile
-    ? { position: [0, 5.5, 12.0], fov: 55 }
+    ? { position: [0, 6.0, 14.0], fov: 60 }
     : { position: [0, 4.5, 9.0], fov: 40 }
 }
 

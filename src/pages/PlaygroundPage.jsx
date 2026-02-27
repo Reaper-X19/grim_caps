@@ -92,8 +92,8 @@ function SceneCanvas({ anim, onCreated }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const camPos = isPortrait ? [1.2, 3.0, 9.5] : [0.8, 1.8, 5.5]
-  const camFov = isPortrait ? 65 : 52
+  const camPos = isPortrait ? [1.2, 3.2, 11.0] : [0.8, 1.8, 5.5]
+  const camFov = isPortrait ? 70 : 52
 
   return (
     <Canvas
