@@ -97,8 +97,8 @@ export default function HomePage() {
 
             {/* Top-Left: Title — pinned high to avoid keyboard */}
             <div className="flex justify-center md:justify-start pointer-events-auto md:pl-2 lg:pl-4">
-              <div className="text-center md:text-left max-w-xl">
-                <h1 className="hero-title-line-1 text-4xl sm:text-5xl lg:text-7xl font-display font-black italic leading-[0.9] uppercase tracking-tighter">
+              <div className="text-center md:text-left max-w-sm">
+                <h1 className="hero-title-line-1 text-3xl sm:text-4xl lg:text-5xl font-display font-black italic leading-[0.9] uppercase tracking-tighter">
                   Your Setup,<br />
                   <span className="text-grim-cyan text-glow">Your<br />Signature</span>
                 </h1>
