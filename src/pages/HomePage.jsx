@@ -118,7 +118,11 @@ export default function HomePage() {
             }}
             dpr={[1, 2]}
           >
-            <PerspectiveCamera makeDefault position={[0, 0, 4]} fov={45} />
+            <PerspectiveCamera 
+              makeDefault 
+              position={typeof window !== 'undefined' && window.innerWidth < 768 ? [0, 0, 5.5] : [0, 0, 4]} 
+              fov={typeof window !== 'undefined' && window.innerWidth < 768 ? 58 : 45} 
+            />
             <HeroCameraRig mouse={mouseRef} />
             <Environment files="/hdr/blue-studio.hdr" background={false} environmentIntensity={0.5} />
             <ambientLight intensity={0.4} />

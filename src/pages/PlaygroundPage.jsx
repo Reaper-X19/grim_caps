@@ -92,8 +92,8 @@ function SceneCanvas({ anim, onCreated }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const camPos = isPortrait ? [1.2, 2.5, 8.0] : [0.8, 1.8, 5.5]
-  const camFov = isPortrait ? 60 : 52
+  const camPos = isPortrait ? [1.2, 3.0, 9.5] : [0.8, 1.8, 5.5]
+  const camFov = isPortrait ? 65 : 52
 
   return (
     <Canvas
@@ -109,8 +109,8 @@ function SceneCanvas({ anim, onCreated }) {
         <Scene />
       </Suspense>
       <EffectComposer disableNormalPass>
-        <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
-        <Vignette eskil={false} offset={0.1} darkness={1.1} />
+        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} height={300} intensity={0.8} />
+        <Vignette eskil={false} offset={0.1} darkness={1.4} />
       </EffectComposer>
     </Canvas>
   )

@@ -178,8 +178,24 @@ function StudioLights() {
   )
 }
 
+// ─── Responsive Camera Hook ───────────────────────────────────────────────────
+function useResponsiveCamera() {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  )
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  return isMobile
+    ? { position: [0, 5.5, 12.0], fov: 55 }
+    : { position: [0, 4.5, 9.0], fov: 40 }
+}
+
 // ─── Main Scene ───────────────────────────────────────────────────────────────
 export default function KeyboardScene() {
+  const cam = useResponsiveCamera()
   return (
     <div className="w-full h-full rounded-lg overflow-hidden">
       <Canvas
@@ -193,8 +209,8 @@ export default function KeyboardScene() {
         dpr={[1, 2]}
         shadows
       >
-        {/* Camera positioned for the FINAL keyboard pose (Image1) */}
-        <PerspectiveCamera makeDefault position={[0, 4.5, 9.0]} fov={40} near={0.1} far={200} />
+        {/* Camera — zooms out on mobile for smaller keyboard appearance */}
+        <PerspectiveCamera makeDefault position={cam.position} fov={cam.fov} near={0.1} far={200} />
 
         <StudioLights />
 
