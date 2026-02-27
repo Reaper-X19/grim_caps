@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Zap, ShieldCheck, Plus, Package } from 'lucide-react'
 import { useGSAP } from '@gsap/react'
@@ -32,6 +32,25 @@ export default function HomePage() {
   const bloomIntensity = 1.5
   const bloomThreshold = 0.9
   const bloomSmoothing = 0.9
+
+  // Dynamic hero camera — scales keyboard for all screen sizes
+  const [heroCam, setHeroCam] = useState(() => {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1440
+    if (w < 640)  return { pos: [0, 0, 6.5], fov: 62 }  // phones
+    if (w < 1024) return { pos: [0, 0, 5.0], fov: 52 }  // tablets / small laptops
+    return { pos: [0, 0, 4], fov: 45 }                   // desktops
+  })
+
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth
+      if (w < 640)       setHeroCam({ pos: [0, 0, 6.5], fov: 62 })
+      else if (w < 1024) setHeroCam({ pos: [0, 0, 5.0], fov: 52 })
+      else               setHeroCam({ pos: [0, 0, 4],   fov: 45 })
+    }
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   // GSAP Animations
   useGSAP(() => {
@@ -116,11 +135,7 @@ export default function HomePage() {
             }}
             dpr={[1, 2]}
           >
-            <PerspectiveCamera 
-              makeDefault 
-              position={typeof window !== 'undefined' && window.innerWidth < 768 ? [0, 0, 5.5] : [0, 0, 4]} 
-              fov={typeof window !== 'undefined' && window.innerWidth < 768 ? 58 : 45} 
-            />
+            <PerspectiveCamera makeDefault position={heroCam.pos} fov={heroCam.fov} />
             <HeroCameraRig mouse={mouseRef} />
             <Environment files="/hdr/blue-studio.hdr" background={false} environmentIntensity={0.5} />
             <ambientLight intensity={0.4} />
