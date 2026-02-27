@@ -93,10 +93,10 @@ export default function HomePage() {
 
         {/* Content Overlay - Pinned to corners, clear of keyboard */}
         <div className="absolute inset-0 z-20 w-full h-full pointer-events-none">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between pt-16 sm:pt-20 pb-16 sm:pb-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between pt-24 sm:pt-28 pb-10 sm:pb-8">
 
             {/* Top-Left: Title — pinned high to avoid keyboard */}
-            <div className="flex justify-center md:justify-start pointer-events-auto">
+            <div className="flex justify-center md:justify-start pointer-events-auto md:pl-2 lg:pl-4">
               <div className="text-center md:text-left max-w-xl">
                 <h1 className="hero-title-line-1 text-4xl sm:text-5xl lg:text-7xl font-display font-black italic leading-[0.9] uppercase tracking-tighter">
                   Your Setup,<br />
@@ -109,7 +109,7 @@ export default function HomePage() {
             <div className="flex-1"></div>
 
             {/* Bottom-Right: Subtitle & CTA — pinned low */}
-            <div className="flex justify-center md:justify-end pointer-events-auto pb-8 sm:pb-4">
+            <div className="flex justify-center md:justify-end pointer-events-auto pb-12 sm:pb-8 md:pr-2 lg:pr-4">
               <div className="text-center md:text-right max-w-md">
                 <h2 className="hero-subtitle text-xl sm:text-2xl lg:text-3xl font-display font-bold italic mb-3 text-grim-cyan leading-tight">
                   Feel the Power of<br />Customization

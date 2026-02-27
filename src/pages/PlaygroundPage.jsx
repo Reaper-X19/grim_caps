@@ -20,7 +20,7 @@ const ANIMATIONS = [
     description: 'Keys materialise from total void — spinning down column by column with a coin-drop physics. Each key lands with a teal impact flash, then a gold scan-line sweeps across the fully assembled board. Loops continuously.',
     accent: '#00F0FF',
     // Deep void: near-black with a cold purple aurora at top-left
-    gradient: 'radial-gradient(ellipse 80% 60% at 10% 0%, #1a0225 0%, #030014 55%, #000000 100%)',
+    gradient: 'radial-gradient(circle at 50% 50%, #0d0118 0%, #030014 40%, #000000 100%)',
     num: '01',
     Scene: GenesisScene,
   },
@@ -31,7 +31,7 @@ const ANIMATIONS = [
     description: 'Rows of keycaps ripple outward from the centre like a sonar pulse, rising and falling in a symmetric standing wave. Each row peaks with a gold emissive flash before settling. The pattern repeats symmetrically — inner rows first, outer rows last.',
     accent: '#FFD600',
     // Warm amber/gold haze — the gold wave radiating outward
-    gradient: 'radial-gradient(ellipse 70% 55% at 50% 50%, #1a1100 0%, #0d0900 50%, #000000 100%)',
+    gradient: 'radial-gradient(circle at 50% 50%, #0f0a00 0%, #0d0900 40%, #000000 100%)',
     num: '02',
     Scene: ResonanceScene,
   },
@@ -42,7 +42,7 @@ const ANIMATIONS = [
     description: 'All keycaps simultaneously explode outward in a radial burst with random 3-axis tumbling and a blinding white flash. They hang in scattered positions, then snap back in a single exponential rush — fully reformed.',
     accent: '#FF0055',
     // Hot pink/magenta burst from centre
-    gradient: 'radial-gradient(ellipse 65% 65% at 50% 45%, #1a0010 0%, #0a0008 55%, #000000 100%)',
+    gradient: 'radial-gradient(circle at 50% 50%, #0f0008 0%, #0a0005 40%, #000000 100%)',
     num: '03',
     Scene: ShatterScene,
   },
@@ -53,7 +53,7 @@ const ANIMATIONS = [
     description: 'A left-to-right wave front sweeps the keyboard — each column of keys heaves upward as the wave hits, then snaps back with a trailing emissive glow. A focused spotlight tracks the wave as the camera tilts toward the advancing front.',
     accent: '#B026FF',
     // Deep purple lightning streak from left
-    gradient: 'radial-gradient(ellipse 90% 50% at 0% 50%, #2d004a 0%, #090518 55%, #000000 100%)',
+    gradient: 'radial-gradient(circle at 50% 50%, #150030 0%, #090518 40%, #000000 100%)',
     num: '04',
     Scene: CascadeScene,
   },
@@ -64,7 +64,7 @@ const ANIMATIONS = [
     description: 'Keycaps rain from high above in randomised order — each spinning like a falling coin. They land with realistic bounce physics and a brief orange impact flash. After the final key lands, the fully assembled board holds before the cycle restarts.',
     accent: '#FFD600',
     // Warm amber overhead beam — like a warehouse ceiling flood light
-    gradient: 'radial-gradient(ellipse 60% 70% at 50% 0%, #1a0e00 0%, #0a0600 50%, #000000 100%)',
+    gradient: 'radial-gradient(circle at 50% 50%, #0f0800 0%, #0a0600 40%, #000000 100%)',
     num: '05',
     Scene: DescentScene,
   },
@@ -75,7 +75,7 @@ const ANIMATIONS = [
     description: 'An exploded engineering teardown — keycaps and weight peel apart first, revealing switches, PCB, plate, emission strips and case beneath. Each layer glows its material colour. Reassembly plays as a sandwich: inner layers click in first, then a left-to-right keycap wave closes the lid.',
     accent: '#B026FF',
     // Purple iridescent at bottom-right — premium product vibe
-    gradient: 'radial-gradient(ellipse 70% 60% at 90% 100%, #100018 0%, #080010 55%, #000000 100%)',
+    gradient: 'radial-gradient(circle at 50% 50%, #0a000f 0%, #080010 40%, #000000 100%)',
     num: '06',
     Scene: ChromeScene,
   },
