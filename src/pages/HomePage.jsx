@@ -91,11 +91,11 @@ export default function HomePage() {
           background: 'radial-gradient(ellipse at top, rgba(176, 38, 255, 0.15) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(0, 240, 255, 0.15) 0%, transparent 50%), linear-gradient(180deg, #05000a 0%, #090518 50%, #05000a 100%)'
         }}></div>
 
-        {/* Content Overlay - Centered & Responsive */}
+        {/* Content Overlay - Pinned to corners, clear of keyboard */}
         <div className="absolute inset-0 z-20 w-full h-full pointer-events-none">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between py-28 md:py-32">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between py-20 sm:py-24 md:py-28">
 
-            {/* Top Section: Title */}
+            {/* Top-Left: Title — pinned high to avoid keyboard */}
             <div className="flex justify-center md:justify-start pointer-events-auto">
               <div className="text-center md:text-left max-w-xl">
                 <h1 className="hero-title-line-1 text-4xl sm:text-5xl lg:text-7xl font-display font-black italic leading-[0.9] uppercase tracking-tighter">
@@ -105,13 +105,16 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Bottom Section: Subtitle & CTA */}
-            <div className="flex justify-center md:justify-end pointer-events-auto">
+            {/* Spacer — pushes CTA below keyboard center */}
+            <div className="flex-1 min-h-[30vh] sm:min-h-[35vh] md:min-h-[40vh]"></div>
+
+            {/* Bottom-Right: Subtitle & CTA — pinned low */}
+            <div className="flex justify-center md:justify-end pointer-events-auto pb-8 sm:pb-4">
               <div className="text-center md:text-right max-w-md">
-                <h2 className="hero-subtitle text-2xl sm:text-3xl lg:text-4xl font-display font-bold italic mb-4 text-grim-cyan leading-tight">
+                <h2 className="hero-subtitle text-xl sm:text-2xl lg:text-3xl font-display font-bold italic mb-3 text-grim-cyan leading-tight">
                   Feel the Power of<br />Customization
                 </h2>
-                <p className="hero-cta-btn text-sm sm:text-base text-gray-300 leading-relaxed font-light mb-8 md:mb-0">
+                <p className="hero-cta-btn text-xs sm:text-sm text-gray-300 leading-relaxed font-light">
                   Get your custom keycaps today and make your dream setup come true
                 </p>
               </div>
