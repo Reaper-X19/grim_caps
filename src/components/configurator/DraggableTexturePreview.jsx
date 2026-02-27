@@ -80,12 +80,12 @@ export default function DraggableTexturePreview({
     const newX = dragStart.startX + deltaX
     const newY = dragStart.startY + deltaY
 
-    // Clamp bounds: at zoom=1, no movement allowed. As zoom increases, allow more movement
-    // Calculate max position based on zoom to prevent texture from creating gaps
-    // The formula: (zoom - 1) * 25 means at 2x zoom you can move ±25%, at 3x zoom ±50%
-    const maxPosition = Math.max(0, (zoom - 1) * 25)
-    const clampedX = Math.max(-maxPosition, Math.min(maxPosition, newX))
-    const clampedY = Math.max(-maxPosition, Math.min(maxPosition, newY))
+    // Exact max offset derived from shader UV math:
+    //   UV = (uv - 0.5) / zoom + 0.5, then uv.x -= offset * 0.01
+    //   For UV to stay in [0,1]: |offset| <= 50 * (1 - 1/zoom)
+    const maxOffset = Math.max(0, 50 * (1 - 1 / zoom))
+    const clampedX = Math.max(-maxOffset, Math.min(maxOffset, newX))
+    const clampedY = Math.max(-maxOffset, Math.min(maxOffset, newY))
 
     onPositionChange(clampedX, clampedY)
   }
@@ -96,19 +96,39 @@ export default function DraggableTexturePreview({
 
   const handleWheel = (e) => {
     e.preventDefault()
-    e.stopPropagation() // Prevent scrollbar scrolling
+    e.stopPropagation()
     const delta = e.deltaY > 0 ? -0.1 : 0.1
     const newZoom = Math.max(minZoom, Math.min(3.0, zoom + delta))
+    // Re-clamp position when zoom decreases
+    const maxOffset = Math.max(0, 50 * (1 - 1 / newZoom))
+    const clampedX = Math.max(-maxOffset, Math.min(maxOffset, positionX))
+    const clampedY = Math.max(-maxOffset, Math.min(maxOffset, positionY))
+    if (clampedX !== positionX || clampedY !== positionY) {
+      onPositionChange(clampedX, clampedY)
+    }
     onZoomChange(newZoom)
   }
 
   const handleZoomIn = () => {
     const newZoom = Math.min(3.0, zoom + 0.2)
+    const maxOffset = Math.max(0, 50 * (1 - 1 / newZoom))
+    const clampedX = Math.max(-maxOffset, Math.min(maxOffset, positionX))
+    const clampedY = Math.max(-maxOffset, Math.min(maxOffset, positionY))
+    if (clampedX !== positionX || clampedY !== positionY) {
+      onPositionChange(clampedX, clampedY)
+    }
     onZoomChange(newZoom)
   }
 
   const handleZoomOut = () => {
     const newZoom = Math.max(minZoom, zoom - 0.2)
+    // Re-clamp position when zooming out
+    const maxOffset = Math.max(0, 50 * (1 - 1 / newZoom))
+    const clampedX = Math.max(-maxOffset, Math.min(maxOffset, positionX))
+    const clampedY = Math.max(-maxOffset, Math.min(maxOffset, positionY))
+    if (clampedX !== positionX || clampedY !== positionY) {
+      onPositionChange(clampedX, clampedY)
+    }
     onZoomChange(newZoom)
   }
 
@@ -141,6 +161,12 @@ export default function DraggableTexturePreview({
       e.stopPropagation()
       const delta = e.deltaY > 0 ? -0.1 : 0.1
       const newZoom = Math.max(minZoom, Math.min(3.0, zoom + delta))
+      const maxOffset = Math.max(0, 50 * (1 - 1 / newZoom))
+      const clampedX = Math.max(-maxOffset, Math.min(maxOffset, positionX))
+      const clampedY = Math.max(-maxOffset, Math.min(maxOffset, positionY))
+      if (clampedX !== positionX || clampedY !== positionY) {
+        onPositionChange(clampedX, clampedY)
+      }
       onZoomChange(newZoom)
     }
 
@@ -149,7 +175,7 @@ export default function DraggableTexturePreview({
     return () => {
       container.removeEventListener('wheel', wheelHandler)
     }
-  }, [zoom, minZoom, onZoomChange])
+  }, [zoom, minZoom, positionX, positionY, onZoomChange, onPositionChange])
 
   return (
     <div className="space-y-4">
