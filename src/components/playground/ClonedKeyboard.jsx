@@ -43,7 +43,7 @@ export default function ClonedKeyboard(props) {
         (orig.name && orig.name.toLowerCase().includes('emission'))
 
       if (isEmission) {
-        const emissColor = orig.color ? orig.color.clone() : new THREE.Color('#00ffcc')
+        const emissColor = orig.color ? orig.color.clone() : new THREE.Color('#00F0FF')
         child.material = new THREE.MeshStandardMaterial({
           color:             emissColor,
           emissive:          emissColor,

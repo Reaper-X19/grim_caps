@@ -112,7 +112,7 @@ export default function GravityDropScene() {
         // Impact: bright cyan flash (looks like switch registering)
         tl.to(mesh.material, {
           emissiveIntensity: 1.2, duration: 0.04,
-          onStart() { mesh.material.emissive?.set('#00ffcc') },
+          onStart() { mesh.material.emissive?.set('#00F0FF') },
         }, t + 1.22)
         tl.to(mesh.material, { emissiveIntensity: 0, duration: 0.65 }, t + 1.26)
       })

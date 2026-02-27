@@ -3,8 +3,6 @@ import { User, LogOut, FileText, ChevronDown } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { signOut } from '../../services/auth'
 import useAuthStore from '../../store/authStore'
-import useCartStore from '../../store/cartStore'
-import useConfiguratorStore from '../../store/configuratorStore'
 
 export default function UserMenu() {
   const [isOpen, setIsOpen] = useState(false)
@@ -12,8 +10,6 @@ export default function UserMenu() {
   const menuRef = useRef(null)
   const user = useAuthStore(state => state.user)
   const clearAuth = useAuthStore(state => state.clearAuth)
-  const clearCart = useCartStore(state => state.clearCart)
-  const resetConfigurator = useConfiguratorStore(state => state.reset)
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -34,11 +30,7 @@ export default function UserMenu() {
     try {
       await signOut()
       clearAuth()
-      clearCart()
-      resetConfigurator()
       setIsOpen(false)
-      // Force redirect to home page
-      window.location.href = '/'
     } catch (error) {
       console.error('Error signing out:', error)
     } finally {

@@ -253,7 +253,7 @@ export default function LiquidChromeScene() {
 
       // ── PHASE 4: KEYCAP WAVE + WEIGHT ────────────────────────────────
       const keyStart = rStart + REASSEMBLE_STEPS.length * STEP_DELAY
-      const tealColor = '#00ffcc'
+      const tealColor = '#00F0FF'
 
       // Tween rotation back to slanted just as keys start landing
       tl.to(groupRef.current.rotation, {
@@ -307,7 +307,7 @@ export default function LiquidChromeScene() {
     <>
       <ambientLight intensity={0.18} />
       <spotLight position={[0, 10, 3]} angle={0.38} penumbra={0.60} intensity={4.0} castShadow color="#ffffff" />
-      <pointLight position={[0,   5, 6]} intensity={1.6} color="#00ffcc" />
+      <pointLight position={[0,   5, 6]} intensity={1.6} color="#00F0FF" />
       <pointLight position={[0,  -5, 6]} intensity={1.4} color="#b87333" />
       <pointLight position={[-8,  0, 3]} intensity={0.9} color="#8899cc" />
       <pointLight position={[ 8,  1, 3]} intensity={0.9} color="#cc44ff" />

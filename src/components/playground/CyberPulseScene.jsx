@@ -26,7 +26,7 @@ const COLUMN_DELAY = 0.058   // was 0.035
 const HOLD_AFTER   = 2.0     // was 0.8
 
 const ACCENT_COLORS = [
-  new THREE.Color('#00ffcc'),
+  new THREE.Color('#00F0FF'),
   new THREE.Color('#7b2fff'),
   new THREE.Color('#ff4488'),
   new THREE.Color('#ffcc00'),

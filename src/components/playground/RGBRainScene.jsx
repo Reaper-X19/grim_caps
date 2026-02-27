@@ -27,7 +27,7 @@ const HOLD      = 4.0     // was 2.0
 
 const PEAK_COLOR     = new THREE.Color('#ffcc44')
 const REST_COLOR     = new THREE.Color('#334466')
-const CRESCENDO_COLOR = new THREE.Color('#00ffcc')  // teal burst on crescendo
+const CRESCENDO_COLOR = new THREE.Color('#00F0FF')  // teal burst on crescendo
 
 function CameraRig({ peakRowRef }) {
   const elapsed = useRef(0)
