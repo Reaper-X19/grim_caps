@@ -139,14 +139,14 @@ export default function KeyboardModel({ introComplete = false }) {
               child.material.userData.isModified = true
             }
             child.material.emissive = new THREE.Color('#ff4655')
-            child.material.emissiveIntensity = 0.5
+            child.material.emissiveIntensity = 1.5
           } else if (isSelected && selectionLocked) {
             if (!child.material.userData.isModified) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
             child.material.emissive = new THREE.Color('#dc2626')
-            child.material.emissiveIntensity = 0.35
+            child.material.emissiveIntensity = 1.0
           }
           child.castShadow = true
           child.receiveShadow = true
@@ -275,7 +275,7 @@ export default function KeyboardModel({ introComplete = false }) {
                   : new THREE.Color('#dc2626')   // Locked/confirmed: deep crimson
                 : new THREE.Color('#000000'),
               emissiveIntensity: isSelected
-                ? (selectionMode && !selectionLocked) ? 0.5 : 0.35
+                ? (selectionMode && !selectionLocked) ? 1.5 : 1.0
                 : 0,
             })
 
@@ -298,7 +298,7 @@ export default function KeyboardModel({ introComplete = false }) {
                   : new THREE.Color('#dc2626')
                 : new THREE.Color('#000000'),
               emissiveIntensity: isSelected
-                ? (selectionMode && !selectionLocked) ? 0.5 : 0.35
+                ? (selectionMode && !selectionLocked) ? 1.5 : 1.0
                 : 0,
             })
           }
@@ -324,7 +324,7 @@ export default function KeyboardModel({ introComplete = false }) {
               child.material.userData.isModified = true
             }
             child.material.emissive = new THREE.Color('#ff4655')
-            child.material.emissiveIntensity = 0.5
+            child.material.emissiveIntensity = 1.5
           } else if (isSelected && selectionLocked) {
             // Locked/confirmed: deep rose — still visible
             if (!child.material.userData.isModified) {
@@ -332,7 +332,7 @@ export default function KeyboardModel({ introComplete = false }) {
               child.material.userData.isModified = true
             }
             child.material.emissive = new THREE.Color('#dc2626')
-            child.material.emissiveIntensity = 0.35
+            child.material.emissiveIntensity = 1.0
           } else {
             // Not in active selection - ensure emissive is cleared
             if (child.material.userData.isModified) {
