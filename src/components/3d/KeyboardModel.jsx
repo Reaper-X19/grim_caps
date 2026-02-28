@@ -4,6 +4,9 @@ import { useThree } from '@react-three/fiber'
 
 import { Model as KeyboardGLTF } from './Keyboard'
 import useConfiguratorStore from '../../store/configuratorStore'
+import useTypingStore from '../../store/typingStore'
+import { playKeySound, initSoundEngine, isSoundReady } from '../../utils/keyboardSoundEngine'
+import { MODEL_TO_SCANCODE } from '../../data/keyMapping'
 import {
   createKeycapMaterial,
   updateKeycapMaterial,
@@ -26,6 +29,7 @@ export default function KeyboardModel({ introComplete = false }) {
   const originalMaterialsRef = useRef(new Map()) // Store original materials from GLTF
   // Cache bounding boxes by a stable string key (sorted key names)
   const boundingBoxCacheRef = useRef(new Map())
+  const originalPositionsRef = useRef(new Map()) // Store original Y positions for key press animation
 
   // Get state from store
   const selectedKeys = useConfiguratorStore((state) => state.selectedKeys)
@@ -34,6 +38,9 @@ export default function KeyboardModel({ introComplete = false }) {
   const keyCustomizations = useConfiguratorStore((state) => state.keyCustomizations)
   const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
   const layers = useConfiguratorStore((state) => state.layers)
+
+  // Typing store — pressed keys for animation
+  const pressedKeys = useTypingStore((state) => state.pressedKeys)
 
   const toggleKeySelection = useConfiguratorStore((state) => state.toggleKeySelection)
   const setSelectedKeys = useConfiguratorStore((state) => state.setSelectedKeys)
@@ -99,6 +106,21 @@ export default function KeyboardModel({ introComplete = false }) {
 
         if (keycap) {
           const keyName = keycap.object.name
+
+          // Play click sound
+          const scancode = MODEL_TO_SCANCODE[keyName]
+          if (scancode) {
+            if (!isSoundReady()) initSoundEngine().then(() => playKeySound(scancode))
+            else playKeySound(scancode)
+          }
+
+          // Brief press animation on click
+          if (!originalPositionsRef.current.has(keyName)) {
+            originalPositionsRef.current.set(keyName, keycap.object.position.y)
+          }
+          const origY = originalPositionsRef.current.get(keyName)
+          keycap.object.position.y = origY - 0.0008
+          setTimeout(() => { keycap.object.position.y = origY }, 100)
 
           // Always use toggle behavior for intuitive on/off clicking
           toggleKeySelection(keyName)
@@ -373,6 +395,60 @@ export default function KeyboardModel({ introComplete = false }) {
     selectionMode,
     selectionLocked
   ])
+
+  // ── Key Press Animation ──────────────────────────────────────────────────────
+  // Moves pressed key meshes down (simulating physical press) and springs back on release
+  useEffect(() => {
+    if (!groupRef.current) return
+
+    const PRESS_DEPTH = 0.0008 // How far down the key travels (in model units)
+    const SPRING_DURATION = 0.08 // seconds for release spring-back
+
+    groupRef.current.traverse((child) => {
+      if (!child.isMesh || !child.name || !child.name.startsWith('K_')) return
+
+      const keyName = child.name
+      const isPressed = pressedKeys.has(keyName)
+
+      // Store original Y position on first encounter
+      if (!originalPositionsRef.current.has(keyName)) {
+        originalPositionsRef.current.set(keyName, child.position.y)
+      }
+
+      const originalY = originalPositionsRef.current.get(keyName)
+
+      if (isPressed) {
+        // Snap down immediately
+        child.position.y = originalY - PRESS_DEPTH
+      } else if (child.position.y < originalY) {
+        // Spring back up smoothly
+        child.position.y = Math.min(child.position.y + PRESS_DEPTH * 0.3, originalY)
+      }
+    })
+  }, [pressedKeys])
+
+  // ── Play sound on 3D key click ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!groupRef.current) return
+
+    const handleMeshClick = async (e) => {
+      // Initialize sound engine on first click if needed
+      if (!isSoundReady()) {
+        await initSoundEngine()
+      }
+
+      const scancode = MODEL_TO_SCANCODE[e.object?.name]
+      if (scancode) {
+        playKeySound(scancode)
+      }
+    }
+
+    // We don't attach directly to meshes — sound is triggered via the existing
+    // raycaster click handler. Instead, we hook into the typing store from
+    // the existing click handler. This is handled by useKeyboardHandler for
+    // physical keys and by the raycaster for mouse clicks.
+    // For mouse clicks on 3D keys, we play sound in the existing click handler.
+  }, [])
 
   return (
     <group

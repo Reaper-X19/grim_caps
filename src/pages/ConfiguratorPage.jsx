@@ -5,8 +5,10 @@ import LayerPanel from '../components/configurator/LayerPanel'
 import ControlPanel from '../components/configurator/ControlPanel'
 import KeySelectionPanel from '../components/configurator/KeySelectionPanel'
 import SaveDesignModal from '../components/configurator/SaveDesignModal'
+import TypingOverlay from '../components/configurator/TypingOverlay'
 import ErrorBoundary from '../components/ErrorBoundary'
 import useCameraStore from '../store/cameraStore'
+import useKeyboardHandler from '../hooks/useKeyboardHandler'
 
 // ─── Camera Control Bar ───────────────────────────────────────────────────────
 function CameraControlBar() {
@@ -104,8 +106,13 @@ export default function ConfiguratorPage() {
     setMobileDrawer(prev => prev === drawer ? null : drawer)
   }
 
+  // Wire physical keyboard → 3D keyboard interaction
+  useKeyboardHandler()
+
   return (
     <div className="fixed inset-0 bg-[#050505] overflow-hidden">
+      {/* Typing Mode Overlay */}
+      <TypingOverlay />
       {/* 1. Cyber-Void Background */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-grim-void overflow-hidden">
         <div className="absolute inset-0 opacity-20"
