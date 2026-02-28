@@ -119,7 +119,7 @@ export default function KeyboardModel({ introComplete = false }) {
             originalPositionsRef.current.set(keyName, keycap.object.position.y)
           }
           const origY = originalPositionsRef.current.get(keyName)
-          keycap.object.position.y = origY - 0.005
+          keycap.object.position.y = origY - 0.0015
           setTimeout(() => { keycap.object.position.y = origY }, 120)
 
           // Always use toggle behavior for intuitive on/off clicking
@@ -401,7 +401,7 @@ export default function KeyboardModel({ introComplete = false }) {
   useEffect(() => {
     if (!groupRef.current) return
 
-    const PRESS_DEPTH = 0.005 // How far down the key travels (in model units)
+    const PRESS_DEPTH = 0.0015 // Subtle but visible — keeps within keycap shell, no stem exposure
     const SPRING_DURATION = 0.08 // seconds for release spring-back
 
     groupRef.current.traverse((child) => {
