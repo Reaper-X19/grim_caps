@@ -9,9 +9,9 @@ export default function KeySelectionPanel() {
   const keyCustomizations = useConfiguratorStore((state) => state.keyCustomizations)
   const copiedStyle = useConfiguratorStore((state) => state.copiedStyle)
   const activeLayerId = useConfiguratorStore((state) => state.activeLayerId)
+  const layers = useConfiguratorStore((state) => state.layers)
 
   const setSelectedKeys = useConfiguratorStore((state) => state.setSelectedKeys)
-  const toggleKeySelection = useConfiguratorStore((state) => state.toggleKeySelection)
   const clearSelection = useConfiguratorStore((state) => state.clearSelection)
   const startSelecting = useConfiguratorStore((state) => state.startSelecting)
   const setSelectionLocked = useConfiguratorStore((state) => state.setSelectionLocked)
@@ -21,38 +21,72 @@ export default function KeySelectionPanel() {
   const pasteStyle = useConfiguratorStore((state) => state.pasteStyle)
 
   const [showAllPresets, setShowAllPresets] = useState(false)
+  const [warningMessage, setWarningMessage] = useState(null)
+
+  // Get active layer
+  const activeLayer = layers.find(l => l.id === activeLayerId)
+
+  // Build set of keys owned by OTHER layers (cannot be selected)
+  const ownedByOtherLayers = {}
+  Object.entries(keyCustomizations).forEach(([keyName, custom]) => {
+    if (custom.layerId !== activeLayerId) {
+      const ownerLayer = layers.find(l => l.id === custom.layerId)
+      ownedByOtherLayers[keyName] = ownerLayer?.name || 'Other Set'
+    }
+  })
+
+  // Check if a key is blocked (owned by another layer)
+  const isKeyBlocked = (keyName) => keyName in ownedByOtherLayers
+
+  // Filter out blocked keys from a key array
+  const filterBlockedKeys = (keys) => keys.filter(k => !isKeyBlocked(k))
 
   const handlePresetClick = (presetKey) => {
-    if (!selectionMode || selectionLocked) return // Require selection mode
+    if (!selectionMode || selectionLocked) return
 
     const keys = KEY_PRESETS[presetKey]
-    if (keys) {
-      // Toggle behavior: if all keys in preset are selected, deselect them; otherwise select them
-      const allSelected = keys.every(key => selectedKeys.includes(key))
+    if (!keys) return
 
-      if (allSelected) {
-        // Deselect all keys in this preset
-        const newSelection = selectedKeys.filter(key => !keys.includes(key))
-        setSelectedKeys(newSelection)
-      } else {
-        // Add all keys from preset (toggle each one)
-        const newSelection = [...selectedKeys]
-        keys.forEach(key => {
-          if (!newSelection.includes(key)) {
-            newSelection.push(key)
-          }
-        })
-        setSelectedKeys(newSelection)
-      }
+    // Filter out blocked keys
+    const availableKeys = filterBlockedKeys(keys)
+    const blockedCount = keys.length - availableKeys.length
+
+    if (blockedCount > 0) {
+      setWarningMessage(`${blockedCount} key(s) blocked — owned by other layers`)
+      setTimeout(() => setWarningMessage(null), 3000)
+    }
+
+    if (availableKeys.length === 0) return
+
+    // Toggle behavior
+    const allSelected = availableKeys.every(key => selectedKeys.includes(key))
+    if (allSelected) {
+      const newSelection = selectedKeys.filter(key => !availableKeys.includes(key))
+      setSelectedKeys(newSelection)
+    } else {
+      const newSelection = [...selectedKeys]
+      availableKeys.forEach(key => {
+        if (!newSelection.includes(key)) {
+          newSelection.push(key)
+        }
+      })
+      setSelectedKeys(newSelection)
     }
   }
 
   const handleSelectAll = () => {
-    if (!selectionMode || selectionLocked) return // Require selection mode
+    if (!selectionMode || selectionLocked) return
 
     const allKeys = Object.values(KEY_PRESETS).flat().filter(k => k)
     const uniqueKeys = [...new Set(allKeys)]
-    setSelectedKeys(uniqueKeys)
+    // Filter out blocked keys
+    const available = filterBlockedKeys(uniqueKeys)
+    const blockedCount = uniqueKeys.length - available.length
+    if (blockedCount > 0) {
+      setWarningMessage(`${blockedCount} key(s) excluded — owned by other layers`)
+      setTimeout(() => setWarningMessage(null), 3000)
+    }
+    setSelectedKeys(available)
   }
 
   const handleStartSelecting = () => {
@@ -67,11 +101,20 @@ export default function KeySelectionPanel() {
 
   const handleEditSelection = () => {
     setSelectionLocked(false)
-    startSelecting() // Re-enter selection mode
+    startSelecting()
   }
 
-  const selectionConflict = useConfiguratorStore((state) => state.selectionConflict)
-  const clearSelectionConflict = useConfiguratorStore((state) => state.clearSelectionConflict)
+  // Check if any selected keys have conflicts
+  const hasConflicts = selectedKeys.some(keyName => {
+    const customization = keyCustomizations[keyName]
+    return customization && customization.layerId !== activeLayerId
+  })
+
+  // Get conflict info
+  const conflictKeys = selectedKeys.filter(keyName => {
+    const customization = keyCustomizations[keyName]
+    return customization && customization.layerId !== activeLayerId
+  })
 
   // Primary presets to show by default
   const primaryPresets = ['wasd', 'arrows', 'numbers', 'row2', 'row3', 'row4']
@@ -89,23 +132,17 @@ export default function KeySelectionPanel() {
         </span>
       </div>
 
-      {/* Conflict Warning Alert */}
-      {selectionConflict && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start justify-between animate-fade-in">
-          <div>
-            <p className="text-xs text-red-400 font-semibold mb-1 flex items-center gap-2">
-              <span className="animate-pulse">⚠️</span> Access Denied
-            </p>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">
-              {selectionConflict}
-            </p>
-          </div>
-          <button 
-            onClick={clearSelectionConflict}
-            className="text-gray-500 hover:text-white transition-colors"
-          >
-            ×
-          </button>
+      {/* Warning Toast */}
+      {warningMessage && (
+        <div className="p-2.5 bg-yellow-500/10 border border-yellow-500/30 text-[10px] text-yellow-400 font-mono uppercase tracking-wide animate-pulse">
+          ⚠ {warningMessage}
+        </div>
+      )}
+
+      {/* Owned Keys Info (when other layers have applied keys) */}
+      {Object.keys(ownedByOtherLayers).length > 0 && (
+        <div className="p-2.5 bg-grim-purple/5 border border-grim-purple/20 text-[10px] text-grim-purple/80 font-mono">
+          <span className="text-grim-purple font-bold">{Object.keys(ownedByOtherLayers).length}</span> keys locked by other layers
         </div>
       )}
 
@@ -156,7 +193,7 @@ export default function KeySelectionPanel() {
       {(selectionMode || selectionLocked) && selectedKeys.length > 0 && (
         <button
           onClick={selectionLocked ? handleEditSelection : handleDoneSelection}
-          className={`w-full px-4 py-4 font-black uppercase tracking-widest transition-all clip-path-polygon-[10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px] relative overflow-hidden group ${selectionLocked
+          className={`w-full px-4 py-4 font-black uppercase tracking-widest transition-all relative overflow-hidden group ${selectionLocked
             ? 'bg-black/40 border border-white/20 text-gray-400 hover:border-white/50 hover:text-white'
             : 'bg-grim-void border border-grim-cyan text-grim-cyan hover:bg-grim-cyan hover:text-black hover:shadow-[0_0_20px_#00F0FF]'
             }`}
@@ -167,6 +204,16 @@ export default function KeySelectionPanel() {
             <div className="absolute inset-0 bg-grim-cyan/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
           )}
         </button>
+      )}
+
+      {/* Conflict Warning */}
+      {hasConflicts && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <p className="text-xs text-red-400 font-semibold mb-1">⚠️ Set Conflict</p>
+          <p className="text-xs text-gray-400">
+            {conflictKeys.length} key(s) already assigned to another set. Clear them first to reassign.
+          </p>
+        </div>
       )}
 
       {/* Quick Select Presets - Only show when in selection mode */}
@@ -183,25 +230,45 @@ export default function KeySelectionPanel() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            {primaryPresets.map(presetKey => (
-              <button
-                key={presetKey}
-                onClick={() => handlePresetClick(presetKey)}
-                className="px-3 py-2 bg-grim-dark hover:bg-grim-dark/70 border border-grim-accent/20 hover:border-grim-accent/40 rounded-lg text-xs font-medium text-gray-300 transition-all"
-              >
-                {getPresetDisplayName(presetKey)}
-              </button>
-            ))}
+            {primaryPresets.map(presetKey => {
+              const keys = KEY_PRESETS[presetKey] || []
+              const blockedCount = keys.filter(k => isKeyBlocked(k)).length
+              return (
+                <button
+                  key={presetKey}
+                  onClick={() => handlePresetClick(presetKey)}
+                  className={`px-3 py-2 bg-grim-dark hover:bg-grim-dark/70 border border-grim-accent/20 hover:border-grim-accent/40 rounded-lg text-xs font-medium transition-all ${
+                    blockedCount === keys.length ? 'text-gray-600 opacity-50' : 'text-gray-300'
+                  }`}
+                  disabled={blockedCount === keys.length}
+                >
+                  {getPresetDisplayName(presetKey)}
+                  {blockedCount > 0 && blockedCount < keys.length && (
+                    <span className="text-[8px] text-yellow-500 ml-1">({blockedCount} locked)</span>
+                  )}
+                </button>
+              )
+            })}
 
-            {showAllPresets && secondaryPresets.map(presetKey => (
-              <button
-                key={presetKey}
-                onClick={() => handlePresetClick(presetKey)}
-                className="px-3 py-2 bg-grim-dark hover:bg-grim-dark/70 border border-grim-accent/20 hover:border-grim-accent/40 rounded-lg text-xs font-medium text-gray-300 transition-all"
-              >
-                {getPresetDisplayName(presetKey)}
-              </button>
-            ))}
+            {showAllPresets && secondaryPresets.map(presetKey => {
+              const keys = KEY_PRESETS[presetKey] || []
+              const blockedCount = keys.filter(k => isKeyBlocked(k)).length
+              return (
+                <button
+                  key={presetKey}
+                  onClick={() => handlePresetClick(presetKey)}
+                  className={`px-3 py-2 bg-grim-dark hover:bg-grim-dark/70 border border-grim-accent/20 hover:border-grim-accent/40 rounded-lg text-xs font-medium transition-all ${
+                    blockedCount === keys.length ? 'text-gray-600 opacity-50' : 'text-gray-300'
+                  }`}
+                  disabled={blockedCount === keys.length}
+                >
+                  {getPresetDisplayName(presetKey)}
+                  {blockedCount > 0 && blockedCount < keys.length && (
+                    <span className="text-[8px] text-yellow-500 ml-1">({blockedCount} locked)</span>
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           {/* Select All / Clear */}
@@ -229,10 +296,14 @@ export default function KeySelectionPanel() {
 
         <button
           onClick={applyToSelectedKeys}
-          disabled={selectedKeys.length === 0}
-          className="w-full px-4 py-3 bg-grim-accent hover:bg-grim-accent/90 text-grim-darker font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-grim-accent"
+          disabled={selectedKeys.length === 0 || hasConflicts}
+          className={`w-full px-4 py-3 font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+            activeLayer?.applied
+              ? 'bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400'
+              : 'bg-grim-accent hover:bg-grim-accent/90 text-grim-darker disabled:hover:bg-grim-accent'
+          }`}
         >
-          Apply to Selected Keys
+          {activeLayer?.applied ? '✓ Re-Apply Selection' : 'Apply Selection'}
         </button>
 
         <button
@@ -297,7 +368,7 @@ export default function KeySelectionPanel() {
       {/* Instructions */}
       <div className="p-3 bg-grim-darker/50 rounded-lg border border-gray-700/30">
         <p className="text-xs text-gray-500 leading-relaxed">
-          <span className="font-semibold text-gray-400">Tip:</span> Click keys on the keyboard to select them, or use presets above. Ctrl+Click to multi-select.
+          <span className="font-semibold text-gray-400">Tip:</span> Click keys on the keyboard to select them, or use presets above. Keys locked by other layers are blocked.
         </p>
       </div>
     </div>

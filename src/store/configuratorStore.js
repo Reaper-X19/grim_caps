@@ -7,6 +7,7 @@ const useConfiguratorStore = create((set, get) => ({
       id: 'layer-1',
       name: 'Set 1',
       selectedKeys: [],
+      applied: false, // true once user clicks "Apply Selection"
       texture: null,
       textureUrl: null,
       baseColor: '#ffffff',
@@ -16,7 +17,7 @@ const useConfiguratorStore = create((set, get) => ({
         positionY: 0,
         rotation: 0
       },
-      boundingBox: null, // Stores { min: Vector2, max: Vector2 } for texture mapping
+      boundingBox: null,
       visible: true
     }
   ],
@@ -40,21 +41,25 @@ const useConfiguratorStore = create((set, get) => ({
 
   // Actions
   addLayer: () => set((state) => {
-    // Prevent adding a new layer if the active layer has no keys applied
-    const activeLayerKeys = Object.values(state.keyCustomizations).filter(c => c.layerId === state.activeLayerId)
-    if (activeLayerKeys.length === 0 && state.layers.length > 0) {
-      return { ...state, selectionConflict: 'Please apply selection to the current layer before adding a new one.' }
-    }
+    // Block if active layer is not applied
+    const activeLayer = state.layers.find(l => l.id === state.activeLayerId)
+    if (activeLayer && !activeLayer.applied) return state
 
     const newId = `layer-${Date.now()}`
+    // Save current selection back to active layer before switching
+    const updatedLayers = state.layers.map(layer =>
+      layer.id === state.activeLayerId
+        ? { ...layer, selectedKeys: [...state.selectedKeys] }
+        : layer
+    )
     return {
-      selectionConflict: null,
       layers: [
-        ...state.layers,
+        ...updatedLayers,
         {
           id: newId,
           name: `Set ${state.layers.length + 1}`,
           selectedKeys: [],
+          applied: false,
           texture: null,
           textureUrl: null,
           baseColor: '#ffffff',
@@ -68,7 +73,10 @@ const useConfiguratorStore = create((set, get) => ({
           visible: true
         }
       ],
-      activeLayerId: newId
+      activeLayerId: newId,
+      selectedKeys: [],
+      selectionLocked: false,
+      selectionMode: false
     }
   }),
 
@@ -90,8 +98,7 @@ const useConfiguratorStore = create((set, get) => ({
     return {
       layers: newLayers,
       activeLayerId: state.activeLayerId === id ? newLayers[0].id : state.activeLayerId,
-      keyCustomizations: newCustomizations,
-      selectionConflict: null
+      keyCustomizations: newCustomizations
     }
   }),
 
@@ -101,7 +108,24 @@ const useConfiguratorStore = create((set, get) => ({
     )
   })),
 
-  setActiveLayer: (id) => set({ activeLayerId: id, selectionConflict: null }),
+  setActiveLayer: (id) => set((state) => {
+    if (id === state.activeLayerId) return state
+    // Save current selection back to current layer
+    const updatedLayers = state.layers.map(layer =>
+      layer.id === state.activeLayerId
+        ? { ...layer, selectedKeys: [...state.selectedKeys] }
+        : layer
+    )
+    // Restore target layer's selection
+    const targetLayer = updatedLayers.find(l => l.id === id)
+    return {
+      layers: updatedLayers,
+      activeLayerId: id,
+      selectedKeys: targetLayer ? [...targetLayer.selectedKeys] : [],
+      selectionLocked: targetLayer?.applied || false,
+      selectionMode: false
+    }
+  }),
 
   selectKeys: (layerId, keys) => set((state) => ({
     layers: state.layers.map(layer =>
@@ -214,62 +238,30 @@ const useConfiguratorStore = create((set, get) => ({
     )
   })),
 
-  // UI feedback state for selection errors
-  selectionConflict: null,
-  clearSelectionConflict: () => set({ selectionConflict: null }),
-
-  // Key selection actions - ENFORCING UNIQUENESS ACROSS LAYERS
-  setSelectedKeys: (keys) => set((state) => {
-    // Filter out keys that belong to OTHER layers
-    const validKeys = []
-    const conflictKeys = []
-    
-    keys.forEach(key => {
-      const existing = state.keyCustomizations[key]
-      if (existing && existing.layerId !== state.activeLayerId) {
-        conflictKeys.push(key)
-      } else {
-        validKeys.push(key)
-      }
-    })
-
-    return {
-      selectedKeys: validKeys,
-      selectionConflict: conflictKeys.length > 0 ? 'Some keys were skipped because they are already used in another layer.' : null
-    }
-  }),
+  // Key selection actions
+  setSelectedKeys: (keys) => set({ selectedKeys: keys }),
 
   toggleKeySelection: (keyName) => set((state) => {
-    // Check for cross-layer conflict
-    const existing = state.keyCustomizations[keyName]
-    if (existing && existing.layerId !== state.activeLayerId) {
-      return { selectionConflict: `Key ${keyName} is already used in another layer.` }
-    }
+    // Block if key is owned by another applied layer
+    const owner = Object.entries(state.keyCustomizations).find(
+      ([k, v]) => k === keyName && v.layerId !== state.activeLayerId
+    )
+    if (owner) return state // Key belongs to another layer, reject
 
     const isSelected = state.selectedKeys.includes(keyName)
     return {
       selectedKeys: isSelected
         ? state.selectedKeys.filter(k => k !== keyName)
-        : [...state.selectedKeys, keyName],
-      selectionConflict: null // Clear conflict on success
+        : [...state.selectedKeys, keyName]
     }
   }),
 
   addToSelection: (keyName) => set((state) => {
-    // Check for cross-layer conflict
-    const existing = state.keyCustomizations[keyName]
-    if (existing && existing.layerId !== state.activeLayerId) {
-      return { selectionConflict: `Key ${keyName} is already used in another layer.` }
-    }
-
     if (state.selectedKeys.includes(keyName)) return state
-    return { 
-      selectedKeys: [...state.selectedKeys, keyName],
-      selectionConflict: null
-    }
+    return { selectedKeys: [...state.selectedKeys, keyName] }
   }),
 
-  clearSelection: () => set({ selectedKeys: [], selectionLocked: false, selectionMode: false, selectionConflict: null }),
+  clearSelection: () => set({ selectedKeys: [], selectionLocked: false, selectionMode: false }),
 
   // Selection mode actions
   setSelectionMode: (active) => set({ selectionMode: active }),
@@ -281,14 +273,14 @@ const useConfiguratorStore = create((set, get) => ({
 
   toggleSelectionLock: () => set((state) => ({ selectionLocked: !state.selectionLocked })),
 
-  // Apply current layer settings to selected keys
+  // Apply current layer settings to selected keys AND mark layer as applied
   applyToSelectedKeys: () => set((state) => {
     const activeLayer = state.layers.find(l => l.id === state.activeLayerId)
     if (!activeLayer || state.selectedKeys.length === 0) return state
 
     const newCustomizations = { ...state.keyCustomizations }
 
-    // Store the current selection as a group - this is critical for bounding box calculation
+    // Store the current selection as a group
     const selectedKeysList = [...state.selectedKeys]
 
     // Apply customization to selected keys
@@ -298,66 +290,58 @@ const useConfiguratorStore = create((set, get) => ({
         textureUrl: activeLayer.textureUrl,
         baseColor: activeLayer.baseColor,
         textureTransform: { ...activeLayer.textureTransform },
-        // Fix: Do NOT use activeLayer.boundingBox as it might be stale due to race conditions.
-        // Instead, set to null to force KeyboardModel to calculate it fresh from keyGroup.
         boundingBox: null,
-        // Store the group of keys this belongs to for unified texture mapping
         keyGroup: selectedKeysList
       }
     })
 
-    // Update layer's selectedKeys to match what was applied
+    // Update layer: save keys AND mark as applied
     const updatedLayers = state.layers.map(layer =>
       layer.id === state.activeLayerId
-        ? { ...layer, selectedKeys: selectedKeysList }
+        ? { ...layer, selectedKeys: selectedKeysList, applied: true }
         : layer
     )
 
     return {
       keyCustomizations: newCustomizations,
       layers: updatedLayers,
-      // KEEP SELECTION ACTIVE AND LOCKED for immediate editing
       selectedKeys: selectedKeysList,
-      selectionMode: false, // Exit selection mode (shows "Edit Selection" button)
-      selectionLocked: true // Lock selection to prevent accidental changes
+      selectionMode: false,
+      selectionLocked: true
     }
   }),
 
-  // Clear customization for selected keys
+  // Clear customization for selected keys (also un-applies the layer)
   clearSelectedKeys: () => set((state) => {
     const newCustomizations = { ...state.keyCustomizations }
     state.selectedKeys.forEach(keyName => {
       delete newCustomizations[keyName]
     })
+    // Un-apply the active layer since its keys are cleared
+    const updatedLayers = state.layers.map(layer =>
+      layer.id === state.activeLayerId
+        ? { ...layer, applied: false, selectedKeys: [] }
+        : layer
+    )
     return {
       keyCustomizations: newCustomizations,
+      layers: updatedLayers,
       selectedKeys: [],
-      selectionLocked: false, // Fix: Unlock selection so user can select again
-      selectionMode: false    // Fix: Reset mode
+      selectionLocked: false,
+      selectionMode: false
     }
   }),
 
-  // Copy style from the first selected key or active layer
+  // Copy style from the first selected key
   copyStyle: () => set((state) => {
-    // If we have selected keys, copy from the first one
-    if (state.selectedKeys.length > 0) {
-      const firstKey = state.selectedKeys[0]
-      const customization = state.keyCustomizations[firstKey]
-      
-      if (customization) {
-        return {
-          copiedStyle: {
-            textureUrl: customization.textureUrl,
-            baseColor: customization.baseColor,
-            textureTransform: { ...customization.textureTransform }
-          }
-        }
-      }
-    }
+    if (state.selectedKeys.length === 0) return state
 
-    // Otherwise, or if key has no customization, copy from the active layer
-    const activeLayer = state.layers.find(l => l.id === state.activeLayerId)
-    if (activeLayer) {
+    const firstKey = state.selectedKeys[0]
+    const customization = state.keyCustomizations[firstKey]
+
+    if (!customization) {
+      // Copy from active layer if key has no customization
+      const activeLayer = state.layers.find(l => l.id === state.activeLayerId)
       return {
         copiedStyle: {
           textureUrl: activeLayer.textureUrl,
@@ -366,11 +350,17 @@ const useConfiguratorStore = create((set, get) => ({
         }
       }
     }
-    
-    return state
+
+    return {
+      copiedStyle: {
+        textureUrl: customization.textureUrl,
+        baseColor: customization.baseColor,
+        textureTransform: { ...customization.textureTransform }
+      }
+    }
   }),
 
-  // Paste copied style to selected keys AND the active layer
+  // Paste copied style to selected keys
   pasteStyle: () => set((state) => {
     if (!state.copiedStyle || state.selectedKeys.length === 0) return state
 
@@ -386,7 +376,8 @@ const useConfiguratorStore = create((set, get) => ({
     })
 
     if (conflicts.length > 0) {
-      return { selectionConflict: 'Cannot paste to keys already used in other layers.' }
+      console.warn('Cannot paste to keys already used in other sets:', conflicts)
+      return state
     }
 
     // Create new keyGroup from current selection for correct bounding box
@@ -396,34 +387,16 @@ const useConfiguratorStore = create((set, get) => ({
     state.selectedKeys.forEach(keyName => {
       newCustomizations[keyName] = {
         layerId: state.activeLayerId,
-        textureUrl: state.copiedStyle.textureUrl,
-        baseColor: state.copiedStyle.baseColor,
-        textureTransform: { ...state.copiedStyle.textureTransform },
-        boundingBox: null, // Force recalculation
+        ...state.copiedStyle,
         keyGroup: selectedKeysList // CRITICAL: Use new selection as keyGroup
       }
     })
 
-    // UPDATE THE ACTIVE LAYER ITSELF so the Customizer UI shows the pasted style
-    const updatedLayers = state.layers.map(layer => 
-      layer.id === state.activeLayerId
-        ? {
-            ...layer,
-            textureUrl: state.copiedStyle.textureUrl,
-            baseColor: state.copiedStyle.baseColor,
-            textureTransform: { ...state.copiedStyle.textureTransform },
-            selectedKeys: selectedKeysList
-          }
-        : layer
-    )
-
     return {
-      layers: updatedLayers,
       keyCustomizations: newCustomizations,
       selectedKeys: [],
       selectionLocked: false, // Unlock after paste
-      selectionMode: false, // Exit selection mode
-      selectionConflict: null
+      selectionMode: false // Exit selection mode
     }
   }),
 
@@ -447,93 +420,67 @@ const useConfiguratorStore = create((set, get) => ({
     return state.keyCustomizations[keyName]?.layerId || null
   },
 
+  // Check if a key is owned by another applied layer
+  isKeyOwnedByOtherLayer: (keyName, currentLayerId) => {
+    const state = get()
+    const custom = state.keyCustomizations[keyName]
+    if (!custom) return null
+    if (custom.layerId === currentLayerId) return null
+    // Find the owning layer name
+    const owningLayer = state.layers.find(l => l.id === custom.layerId)
+    return owningLayer ? owningLayer.name : custom.layerId
+  },
+
+  // Get map of all keys owned by applied layers (for rendering blocked indicators)
+  getOwnedKeysMap: () => {
+    const state = get()
+    const map = {}
+    Object.entries(state.keyCustomizations).forEach(([keyName, custom]) => {
+      map[keyName] = custom.layerId
+    })
+    return map
+  },
+
   // Load a saved design into the configurator
   loadDesign: (designData) => {
-    // Check if this is a newer multi-layer design
-    if (designData.texture_config?.multilayers) {
-      const multilayers = designData.texture_config.multilayers
-      set({
-        selectedKeys: [], // Usually empty when a saved design is first loaded
-        layers: multilayers.layers.map(layer => ({
-          ...layer,
-          texture: null, // We have a URL, but no local File object
-          // Restore bounding box from serialized JSON if present
-          boundingBox: layer.boundingBox ? {
-            min: layer.boundingBox.min,
-            max: layer.boundingBox.max
-          } : null
-        })),
-        activeLayerId: multilayers.layers[0]?.id || 'layer-1',
-        keyCustomizations: multilayers.keyCustomizations || {},
-        selectionLocked: false,
-        selectionMode: false,
-        selectionConflict: null,
-        
-        // Track which design was loaded
-        loadedDesignId: designData.id || null,
-        loadedDesignMeta: designData.id ? {
-          title: designData.name || '',
-          description: designData.description || '',
-          category: designData.category || 'custom',
-          tags: designData.tags || [],
-          isPublic: designData.is_public || false
-        } : null
-      })
-    } else {
-      // Legacy single-layer fallback
-      set({
-        selectedKeys: designData.selected_keys || [],
-        layers: [
-          {
-            id: 'layer-1',
-            name: 'Set 1',
-            selectedKeys: designData.selected_keys || [],
-            texture: null,
-            textureUrl: designData.texture_url || null,
-            baseColor: designData.base_color || '#ffffff',
-            textureTransform: designData.texture_config || {
-              zoom: 1,
-              positionX: 0,
-              positionY: 0,
-              rotation: 0
-            },
-            boundingBox: (designData.texture_config?.boundsMin && designData.texture_config?.boundsMax) ? {
-              min: designData.texture_config.boundsMin,
-              max: designData.texture_config.boundsMax
-            } : null,
-            visible: true
-          }
-        ],
-        activeLayerId: 'layer-1',
-        
-        // Emulate key customizations for the single layer
-        keyCustomizations: (designData.selected_keys || []).reduce((acc, key) => ({
-          ...acc,
-          [key]: {
-            layerId: 'layer-1',
-            textureUrl: designData.texture_url || null,
-            baseColor: designData.base_color || '#ffffff',
-            textureTransform: designData.texture_config || { zoom: 1, positionX: 0, positionY: 0, rotation: 0 },
-            boundingBox: null,
-            keyGroup: designData.selected_keys || []
-          }
-        }), {}),
-        
-        selectionLocked: false,
-        selectionMode: false,
-        selectionConflict: null,
-        
-        // Track which design was loaded
-        loadedDesignId: designData.id || null,
-        loadedDesignMeta: designData.id ? {
-          title: designData.name || '',
-          description: designData.description || '',
-          category: designData.category || 'custom',
-          tags: designData.tags || [],
-          isPublic: designData.is_public || false
-        } : null
-      })
-    }
+    set({
+      selectedKeys: designData.selected_keys || [],
+      layers: [
+        {
+          id: 'layer-1',
+          name: 'Set 1',
+          selectedKeys: designData.selected_keys || [],
+          applied: (designData.selected_keys || []).length > 0, // Auto-apply loaded designs
+          texture: null,
+          textureUrl: designData.texture_url || null,
+          baseColor: designData.base_color || '#ffffff',
+          textureTransform: designData.texture_config || {
+            zoom: 1,
+            positionX: 0,
+            positionY: 0,
+            rotation: 0
+          },
+          boundingBox: (designData.texture_config?.boundsMin && designData.texture_config?.boundsMax) ? {
+            min: designData.texture_config.boundsMin,
+            max: designData.texture_config.boundsMax
+          } : null,
+          visible: true
+        }
+      ],
+      activeLayerId: 'layer-1',
+      keyCustomizations: {},
+      selectionLocked: false,
+      selectionMode: false,
+      // Track which design was loaded so Save can offer overwrite
+      loadedDesignId: designData.id || null,
+      loadedDesignMeta: designData.id ? {
+        title: designData.name || '',
+        description: designData.description || '',
+        category: designData.category || 'custom',
+        tags: designData.tags || [],
+        isPublic: designData.is_public || false
+      } : null
+    })
   },
 
   // Clear loaded design tracking (e.g. when starting fresh)
@@ -551,6 +498,7 @@ const useConfiguratorStore = create((set, get) => ({
         id: 'layer-1',
         name: 'Set 1',
         selectedKeys: [],
+        applied: false,
         texture: null,
         textureUrl: null,
         baseColor: '#ffffff',
