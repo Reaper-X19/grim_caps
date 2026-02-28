@@ -78,6 +78,13 @@ export default function KeySelectionPanel() {
   const handleSelectAll = () => {
     if (!selectionMode || selectionLocked) return
 
+    // Block Select All when multiple layers exist
+    if (layers.length > 1) {
+      setWarningMessage('Select All disabled — multiple layers exist. Use presets instead.')
+      setTimeout(() => setWarningMessage(null), 3000)
+      return
+    }
+
     const allKeys = Object.values(KEY_PRESETS).flat().filter(k => k)
     const uniqueKeys = [...new Set(allKeys)]
     // Filter out blocked keys
@@ -87,7 +94,13 @@ export default function KeySelectionPanel() {
       setWarningMessage(`${blockedCount} key(s) excluded — owned by other layers`)
       setTimeout(() => setWarningMessage(null), 3000)
     }
-    setSelectedKeys(available)
+    // Toggle: if all are already selected, deselect all
+    const allSelected = available.every(key => selectedKeys.includes(key))
+    if (allSelected) {
+      setSelectedKeys([])
+    } else {
+      setSelectedKeys(available)
+    }
   }
 
   const handleStartSelecting = () => {
@@ -277,7 +290,13 @@ export default function KeySelectionPanel() {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleSelectAll}
-              className="px-3 py-2 bg-grim-accent/10 hover:bg-grim-accent/20 border border-grim-accent/30 rounded-lg text-xs font-medium text-grim-accent transition-all"
+              disabled={layers.length > 1}
+              className={`px-3 py-2 border rounded-lg text-xs font-medium transition-all ${
+                layers.length > 1
+                  ? 'bg-gray-800/30 border-gray-600/20 text-gray-600 cursor-not-allowed'
+                  : 'bg-grim-accent/10 hover:bg-grim-accent/20 border-grim-accent/30 text-grim-accent'
+              }`}
+              title={layers.length > 1 ? 'Disabled when multiple layers exist' : 'Select all keys'}
             >
               Select All
             </button>
