@@ -138,8 +138,15 @@ export default function KeyboardModel({ introComplete = false }) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#00ffcc')
-            child.material.emissiveIntensity = 0.3
+            child.material.emissive = new THREE.Color('#a855f7')
+            child.material.emissiveIntensity = 0.25
+          } else if (isSelected && selectionLocked) {
+            if (!child.material.userData.isModified) {
+              child.material = child.material.clone()
+              child.material.userData.isModified = true
+            }
+            child.material.emissive = new THREE.Color('#7c3aed')
+            child.material.emissiveIntensity = 0.15
           }
           child.castShadow = true
           child.receiveShadow = true
@@ -261,9 +268,15 @@ export default function KeyboardModel({ introComplete = false }) {
               zoom: transforms.zoom,
               offset: new THREE.Vector2(transforms.positionX, transforms.positionY),
               rotation: transforms.rotation * Math.PI / 180,
-              // ONLY show highlight during active selection mode (not when locked after applying)
-              emissive: (isSelected && selectionMode && !selectionLocked) ? new THREE.Color('#00ffcc') : new THREE.Color('#000000'),
-              emissiveIntensity: (isSelected && selectionMode && !selectionLocked) ? 0.3 : 0,
+              // Selection highlight: active picking = brighter, confirmed = subtler
+              emissive: isSelected
+                ? (selectionMode && !selectionLocked)
+                  ? new THREE.Color('#a855f7')   // Active selection: electric purple
+                  : new THREE.Color('#7c3aed')   // Locked/confirmed: deep violet
+                : new THREE.Color('#000000'),
+              emissiveIntensity: isSelected
+                ? (selectionMode && !selectionLocked) ? 0.25 : 0.15
+                : 0,
             })
 
             child.material = material
@@ -278,9 +291,15 @@ export default function KeyboardModel({ introComplete = false }) {
               zoom: transforms.zoom,
               offset: new THREE.Vector2(transforms.positionX, transforms.positionY),
               rotation: transforms.rotation * Math.PI / 180,
-              // ONLY show highlight during active selection mode (not when locked after applying)
-              emissive: (isSelected && selectionMode && !selectionLocked) ? new THREE.Color('#00ffcc') : new THREE.Color('#000000'),
-              emissiveIntensity: (isSelected && selectionMode && !selectionLocked) ? 0.3 : 0,
+              // Selection highlight: active picking = brighter, confirmed = subtler
+              emissive: isSelected
+                ? (selectionMode && !selectionLocked)
+                  ? new THREE.Color('#a855f7')
+                  : new THREE.Color('#7c3aed')
+                : new THREE.Color('#000000'),
+              emissiveIntensity: isSelected
+                ? (selectionMode && !selectionLocked) ? 0.25 : 0.15
+                : 0,
             })
           }
         } else {
@@ -297,15 +316,23 @@ export default function KeyboardModel({ introComplete = false }) {
             }
           }
 
-          // Apply selection highlight ONLY if in active selection mode (not locked)
+          // Apply selection highlight for selected keys
           if (isSelected && selectionMode && !selectionLocked) {
-            // Ensure we have a cloned material to modify
+            // Active selection: electric purple
             if (!child.material.userData.isModified) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#00ffcc')
-            child.material.emissiveIntensity = 0.3
+            child.material.emissive = new THREE.Color('#a855f7')
+            child.material.emissiveIntensity = 0.25
+          } else if (isSelected && selectionLocked) {
+            // Locked/confirmed: deep violet — still visible
+            if (!child.material.userData.isModified) {
+              child.material = child.material.clone()
+              child.material.userData.isModified = true
+            }
+            child.material.emissive = new THREE.Color('#7c3aed')
+            child.material.emissiveIntensity = 0.15
           } else {
             // Not in active selection - ensure emissive is cleared
             if (child.material.userData.isModified) {
