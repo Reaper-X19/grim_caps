@@ -413,15 +413,31 @@ const useConfiguratorStore = create((set, get) => ({
       newCustomizations[keyName] = {
         layerId: state.activeLayerId,
         ...state.copiedStyle,
+        boundingBox: null, // Force fresh bounding box calculation
         keyGroup: selectedKeysList // CRITICAL: Use new selection as keyGroup
       }
     })
 
+    // Update layer: save keys, mark as applied, copy texture settings
+    const updatedLayers = state.layers.map(layer =>
+      layer.id === state.activeLayerId
+        ? {
+            ...layer,
+            selectedKeys: selectedKeysList,
+            applied: true,
+            textureUrl: state.copiedStyle.textureUrl || layer.textureUrl,
+            baseColor: state.copiedStyle.baseColor || layer.baseColor,
+            textureTransform: state.copiedStyle.textureTransform || layer.textureTransform
+          }
+        : layer
+    )
+
     return {
       keyCustomizations: newCustomizations,
-      selectedKeys: [],
-      selectionLocked: false, // Unlock after paste
-      selectionMode: false // Exit selection mode
+      layers: updatedLayers,
+      selectedKeys: selectedKeysList, // Keep selection visible
+      selectionLocked: true, // Lock after paste (same as apply)
+      selectionMode: false
     }
   }),
 
