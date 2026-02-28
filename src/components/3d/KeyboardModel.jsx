@@ -68,6 +68,9 @@ export default function KeyboardModel({ introComplete = false }) {
         texture.wrapS = THREE.ClampToEdgeWrapping
         texture.wrapT = THREE.ClampToEdgeWrapping
         setActiveTexture(texture)
+        // Pre-cache into texturesRef so other layers' customizations
+        // can find this texture synchronously during Priority 1 rendering
+        texturesRef.current.set(url, texture)
       },
       undefined,
       (err) => {
