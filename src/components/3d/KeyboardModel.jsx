@@ -118,7 +118,7 @@ export default function KeyboardModel({ introComplete = false }) {
           const gltfY = originalPositionsRef.current.get(keyName)
           if (gltfY !== undefined) {
             keycap.object.position.y = gltfY // press down to GLTF position
-            setTimeout(() => { keycap.object.position.y = gltfY + 0.005 }, 120) // spring back to raised
+            setTimeout(() => { keycap.object.position.y = gltfY + 0.001 }, 120) // spring back to raised
           }
 
           // Always use toggle behavior for intuitive on/off clicking
@@ -399,7 +399,7 @@ export default function KeyboardModel({ introComplete = false }) {
   // Strategy: Raise ALL keycaps by 0.005 at init so they sit above their GLTF
   // default. Then press animation moves them DOWN by 0.005 back to the GLTF
   // position — no switch stems exposed since pressed = original GLTF height.
-  const KEYCAP_RAISE = 0.005
+  const KEYCAP_RAISE = 0.001
   const keycapsRaisedRef = useRef(false)
 
   // Raise all keycaps once after intro completes
