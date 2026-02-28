@@ -19,6 +19,7 @@ export default function KeySelectionPanel() {
   const clearSelectedKeys = useConfiguratorStore((state) => state.clearSelectedKeys)
   const copyStyle = useConfiguratorStore((state) => state.copyStyle)
   const pasteStyle = useConfiguratorStore((state) => state.pasteStyle)
+  const editSelection = useConfiguratorStore((state) => state.editSelection)
 
   const [showAllPresets, setShowAllPresets] = useState(false)
   const [warningMessage, setWarningMessage] = useState(null)
@@ -100,8 +101,9 @@ export default function KeySelectionPanel() {
   }
 
   const handleEditSelection = () => {
-    setSelectionLocked(false)
-    startSelecting()
+    // Use editSelection which clears keyCustomizations for this layer,
+    // ensuring all keys (old + new) use unified bounding box
+    editSelection()
   }
 
   // Check if any selected keys have conflicts

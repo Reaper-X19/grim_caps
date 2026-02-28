@@ -199,6 +199,7 @@ function CameraControls({ defaultPosition }) {
   const controlsRef = useRef()
   const rotateEnabled = useCameraStore((s) => s.rotateEnabled)
   const panEnabled = useCameraStore((s) => s.panEnabled)
+  const zoomEnabled = useCameraStore((s) => s.zoomEnabled)
   const resetTrigger = useCameraStore((s) => s.resetTrigger)
   const prevResetRef = useRef(resetTrigger)
 
@@ -245,6 +246,7 @@ function CameraControls({ defaultPosition }) {
       maxPolarAngle={Math.PI * 0.52}
       enableRotate={rotateEnabled}
       enablePan={panEnabled}
+      enableZoom={zoomEnabled}
       target={[FINAL.px, FINAL.py, FINAL.pz]}
     />
   )

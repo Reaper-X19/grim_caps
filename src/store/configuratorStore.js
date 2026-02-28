@@ -268,6 +268,31 @@ const useConfiguratorStore = create((set, get) => ({
 
   startSelecting: () => set({ selectionMode: true, selectionLocked: false }),
 
+  // Edit selection on an already-applied layer:
+  // Clears keyCustomizations for this layer's keys so ALL selected keys
+  // use the unified real-time preview path (same bounding box)
+  editSelection: () => set((state) => {
+    const newCustomizations = { ...state.keyCustomizations }
+    // Remove customizations for keys belonging to this layer
+    Object.keys(newCustomizations).forEach(keyName => {
+      if (newCustomizations[keyName].layerId === state.activeLayerId) {
+        delete newCustomizations[keyName]
+      }
+    })
+    // Un-apply the layer so it goes back to "pending"
+    const updatedLayers = state.layers.map(layer =>
+      layer.id === state.activeLayerId
+        ? { ...layer, applied: false }
+        : layer
+    )
+    return {
+      keyCustomizations: newCustomizations,
+      layers: updatedLayers,
+      selectionMode: true,
+      selectionLocked: false
+    }
+  }),
+
   // Selection lock actions
   setSelectionLocked: (locked) => set({ selectionLocked: locked }),
 

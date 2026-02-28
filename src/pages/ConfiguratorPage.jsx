@@ -12,8 +12,10 @@ import useCameraStore from '../store/cameraStore'
 function CameraControlBar() {
   const rotateEnabled = useCameraStore((s) => s.rotateEnabled)
   const panEnabled = useCameraStore((s) => s.panEnabled)
+  const zoomEnabled = useCameraStore((s) => s.zoomEnabled)
   const toggleRotate = useCameraStore((s) => s.toggleRotate)
   const togglePan = useCameraStore((s) => s.togglePan)
+  const toggleZoom = useCameraStore((s) => s.toggleZoom)
   const resetCamera = useCameraStore((s) => s.resetCamera)
 
   return (
@@ -55,6 +57,24 @@ function CameraControlBar() {
             <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           )}
           <span className="hidden sm:inline">Position</span>
+        </button>
+
+        {/* Zoom Toggle */}
+        <button
+          onClick={toggleZoom}
+          className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all border ${
+            zoomEnabled
+              ? 'bg-green-500/10 border-green-500/50 text-green-400 shadow-[0_0_8px_rgba(34,197,94,0.2)]'
+              : 'bg-gray-700/30 border-gray-600/30 text-gray-500'
+          }`}
+          title={zoomEnabled ? 'Lock Zoom' : 'Unlock Zoom'}
+        >
+          {zoomEnabled ? (
+            <Unlock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          ) : (
+            <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          )}
+          <span className="hidden sm:inline">Zoom</span>
         </button>
 
         {/* Divider */}
