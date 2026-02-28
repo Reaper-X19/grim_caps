@@ -1,11 +1,78 @@
 import { Suspense, useState } from 'react'
-import { Save, Layers, Sliders, MousePointerClick, X, ChevronUp } from 'lucide-react'
+import { Save, Layers, Sliders, MousePointerClick, X, ChevronUp, RotateCcw, Lock, Unlock, Move, Orbit } from 'lucide-react'
 import KeyboardScene from '../components/3d/KeyboardScene'
 import LayerPanel from '../components/configurator/LayerPanel'
 import ControlPanel from '../components/configurator/ControlPanel'
 import KeySelectionPanel from '../components/configurator/KeySelectionPanel'
 import SaveDesignModal from '../components/configurator/SaveDesignModal'
 import ErrorBoundary from '../components/ErrorBoundary'
+import useCameraStore from '../store/cameraStore'
+
+// ─── Camera Control Bar ───────────────────────────────────────────────────────
+function CameraControlBar() {
+  const rotateEnabled = useCameraStore((s) => s.rotateEnabled)
+  const panEnabled = useCameraStore((s) => s.panEnabled)
+  const toggleRotate = useCameraStore((s) => s.toggleRotate)
+  const togglePan = useCameraStore((s) => s.togglePan)
+  const resetCamera = useCameraStore((s) => s.resetCamera)
+
+  return (
+    <div className="fixed bottom-16 2xl:bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
+      <div className="flex items-center gap-1 sm:gap-2 bg-grim-panel/90 backdrop-blur-xl border border-white/10 px-2 sm:px-3 py-1.5 sm:py-2 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
+        style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+      >
+        {/* Rotate Toggle */}
+        <button
+          onClick={toggleRotate}
+          className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all border ${
+            rotateEnabled
+              ? 'bg-grim-cyan/10 border-grim-cyan/50 text-grim-cyan shadow-[0_0_8px_rgba(0,240,255,0.2)]'
+              : 'bg-red-500/10 border-red-500/30 text-red-400'
+          }`}
+          title={rotateEnabled ? 'Lock Rotation' : 'Unlock Rotation'}
+        >
+          {rotateEnabled ? (
+            <Unlock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          ) : (
+            <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          )}
+          <span className="hidden sm:inline">Rotate</span>
+        </button>
+
+        {/* Pan Toggle */}
+        <button
+          onClick={togglePan}
+          className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all border ${
+            panEnabled
+              ? 'bg-grim-purple/10 border-grim-purple/50 text-grim-purple shadow-[0_0_8px_rgba(176,38,255,0.2)]'
+              : 'bg-gray-700/30 border-gray-600/30 text-gray-500'
+          }`}
+          title={panEnabled ? 'Lock Position' : 'Unlock Position'}
+        >
+          {panEnabled ? (
+            <Unlock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          ) : (
+            <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          )}
+          <span className="hidden sm:inline">Position</span>
+        </button>
+
+        {/* Divider */}
+        <div className="w-px h-5 sm:h-6 bg-white/10 mx-0.5"></div>
+
+        {/* Reset Camera */}
+        <button
+          onClick={resetCamera}
+          className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-grim-pink/80 hover:text-grim-pink border border-grim-pink/20 hover:border-grim-pink/50 hover:bg-grim-pink/10 transition-all group"
+          title="Reset Camera"
+        >
+          <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:animate-spin" />
+          <span className="hidden sm:inline">Reset</span>
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function ConfiguratorPage() {
   const [activeTab, setActiveTab] = useState('customize')
@@ -130,6 +197,11 @@ export default function ConfiguratorPage() {
           </div>
         </div>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          CAMERA CONTROLS BAR — responsive floating bar
+          ═══════════════════════════════════════════════════════════════ */}
+      <CameraControlBar />
 
       {/* ═══════════════════════════════════════════════════════════════
           MOBILE/TABLET LAYOUT (<1024px) — Bottom drawer

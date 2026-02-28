@@ -32,6 +32,7 @@ import {
 import * as THREE from 'three'
 import gsap from 'gsap'
 import KeyboardModel from './KeyboardModel'
+import useCameraStore from '../../store/cameraStore'
 
 // ─── Image1: FINAL Three.js values ────────────────────────────────────────────
 // (Leva posY=0.61 → Three.js Z; Leva posZ=-1.0 → Three.js Y)
@@ -193,6 +194,62 @@ function useResponsiveCamera() {
     : { position: [0, 4.5, 9.0], fov: 40 }
 }
 
+// ─── Camera Controls (OrbitControls + store integration) ──────────────────────
+function CameraControls({ defaultPosition }) {
+  const controlsRef = useRef()
+  const rotateEnabled = useCameraStore((s) => s.rotateEnabled)
+  const panEnabled = useCameraStore((s) => s.panEnabled)
+  const resetTrigger = useCameraStore((s) => s.resetTrigger)
+  const prevResetRef = useRef(resetTrigger)
+
+  // Handle camera reset
+  useEffect(() => {
+    if (resetTrigger === prevResetRef.current) return
+    prevResetRef.current = resetTrigger
+
+    const controls = controlsRef.current
+    if (!controls) return
+
+    const camera = controls.object
+    const target = controls.target
+
+    // Animate camera back to default position
+    gsap.to(camera.position, {
+      x: defaultPosition[0],
+      y: defaultPosition[1],
+      z: defaultPosition[2],
+      duration: 1.0,
+      ease: 'power3.out',
+      onUpdate: () => controls.update(),
+    })
+
+    // Animate target back to keyboard center
+    gsap.to(target, {
+      x: FINAL.px,
+      y: FINAL.py,
+      z: FINAL.pz,
+      duration: 1.0,
+      ease: 'power3.out',
+      onUpdate: () => controls.update(),
+    })
+  }, [resetTrigger, defaultPosition])
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enableDamping
+      dampingFactor={0.05}
+      minDistance={4}
+      maxDistance={20}
+      minPolarAngle={Math.PI * 0.05}
+      maxPolarAngle={Math.PI * 0.52}
+      enableRotate={rotateEnabled}
+      enablePan={panEnabled}
+      target={[FINAL.px, FINAL.py, FINAL.pz]}
+    />
+  )
+}
+
 // ─── Main Scene ───────────────────────────────────────────────────────────────
 export default function KeyboardScene() {
   const cam = useResponsiveCamera()
@@ -233,22 +290,9 @@ export default function KeyboardScene() {
           color="#000033"
         />
 
-        {/*
-          OrbitControls target = Image1 final keyboard world position.
-          This ensures orbiting pivots around the visible keyboard.
-          Enabled from the start — user can orbit even during intro.
-        */}
-        <OrbitControls
-          enableDamping
-          dampingFactor={0.05}
-          minDistance={4}
-          maxDistance={20}
-          minPolarAngle={Math.PI * 0.05}
-          maxPolarAngle={Math.PI * 0.52}
-          enablePan={false}
-          target={[FINAL.px, FINAL.py, FINAL.pz]}
-        />
+        <CameraControls defaultPosition={cam.position} />
       </Canvas>
     </div>
   )
 }
+
