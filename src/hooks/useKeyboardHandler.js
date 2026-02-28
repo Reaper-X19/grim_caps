@@ -10,7 +10,8 @@ import useConfiguratorStore from '../store/configuratorStore'
  * - In selection mode: physical keys toggle selection on the 3D model
  * - Outside selection mode: enters typing mode, shows typed text
  * - Always: plays Cherry MX sound + triggers keydown/keyup animation
- * - Holding a key keeps it pressed (no repeat)
+ * - Holding a key keeps it pressed (no repeat) — except Backspace/Delete
+ * - Arrow keys move cursor in typing mode
  * - Only reacts to keys that exist on the 65% model
  */
 export default function useKeyboardHandler() {
@@ -26,6 +27,11 @@ export default function useKeyboardHandler() {
   const keyUp = useTypingStore((s) => s.keyUp)
   const appendChar = useTypingStore((s) => s.appendChar)
   const handleBackspace = useTypingStore((s) => s.handleBackspace)
+  const handleDelete = useTypingStore((s) => s.handleDelete)
+  const moveCursorLeft = useTypingStore((s) => s.moveCursorLeft)
+  const moveCursorRight = useTypingStore((s) => s.moveCursorRight)
+  const moveCursorHome = useTypingStore((s) => s.moveCursorHome)
+  const moveCursorEnd = useTypingStore((s) => s.moveCursorEnd)
   const enterTypingMode = useTypingStore((s) => s.enterTypingMode)
   const exitTypingMode = useTypingStore((s) => s.exitTypingMode)
   const soundEnabled = useTypingStore((s) => s.soundEnabled)
@@ -38,6 +44,9 @@ export default function useKeyboardHandler() {
   useEffect(() => { selectionModeRef.current = selectionMode }, [selectionMode])
   useEffect(() => { selectionLockedRef.current = selectionLocked }, [selectionLocked])
   useEffect(() => { soundEnabledRef.current = soundEnabled }, [soundEnabled])
+
+  // Keys that are allowed to repeat (like a real keyboard)
+  const REPEATABLE_KEYS = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
 
   useEffect(() => {
     const handleKeyDown = async (e) => {
@@ -56,38 +65,53 @@ export default function useKeyboardHandler() {
 
       // Escape closes typing mode
       if (e.code === 'Escape') {
-        // Play sound but also close typing mode
         exitTypingMode()
       }
 
-      // Skip repeats (holding key down)
-      if (e.repeat) return
+      // Skip repeats — except for Backspace, Delete, and Arrow keys
+      if (e.repeat && !REPEATABLE_KEYS.includes(e.code)) return
 
-      // Initialize sound engine on first keypress (user gesture requirement)
-      if (!soundInitRef.current) {
-        soundInitRef.current = true
-        await initSoundEngine()
+      // On first non-repeat keypress: init sound + animate
+      if (!e.repeat) {
+        // Initialize sound engine on first keypress (user gesture requirement)
+        if (!soundInitRef.current) {
+          soundInitRef.current = true
+          await initSoundEngine()
+        }
+
+        // Play sound (only on initial press, not repeats)
+        if (soundEnabledRef.current && isSoundReady()) {
+          playKeySound(mapping.scancode)
+        }
+
+        // Trigger keydown animation (only on initial press)
+        keyDown(mapping.model)
       }
-
-      // Play sound
-      if (soundEnabledRef.current && isSoundReady()) {
-        playKeySound(mapping.scancode)
-      }
-
-      // Trigger keydown animation
-      keyDown(mapping.model)
 
       // Mode-dependent behavior
       if (selectionModeRef.current && !selectionLockedRef.current) {
-        // Selection mode: toggle key selection
-        toggleKeySelection(mapping.model)
+        // Selection mode: toggle key selection (no repeat)
+        if (!e.repeat) {
+          toggleKeySelection(mapping.model)
+        }
       } else if (!selectionModeRef.current) {
-        // Not in selection mode: typing mode
+        // Typing mode
         enterTypingMode()
+
         if (e.code === 'Backspace') {
           handleBackspace()
-        } else if (mapping.char) {
-          // Handle shift for uppercase
+        } else if (e.code === 'Delete') {
+          handleDelete()
+        } else if (e.code === 'ArrowLeft') {
+          moveCursorLeft()
+        } else if (e.code === 'ArrowRight') {
+          moveCursorRight()
+        } else if (e.code === 'Home') {
+          moveCursorHome()
+        } else if (e.code === 'End') {
+          moveCursorEnd()
+        } else if (mapping.char && !e.repeat) {
+          // Handle shift for uppercase (no repeat for character keys)
           const char = e.shiftKey ? mapping.char.toUpperCase() : mapping.char
           appendChar(char)
         }
@@ -112,5 +136,7 @@ export default function useKeyboardHandler() {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [toggleKeySelection, keyDown, keyUp, appendChar, handleBackspace, enterTypingMode, exitTypingMode])
+  }, [toggleKeySelection, keyDown, keyUp, appendChar, handleBackspace, handleDelete,
+      moveCursorLeft, moveCursorRight, moveCursorHome, moveCursorEnd,
+      enterTypingMode, exitTypingMode])
 }

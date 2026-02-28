@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
 import useTypingStore from '../../store/typingStore'
-import { getVolume, setVolume, toggleMute, getMuted } from '../../utils/keyboardSoundEngine'
+import { toggleMute } from '../../utils/keyboardSoundEngine'
 
 export default function TypingOverlay() {
   const typingMode = useTypingStore((s) => s.typingMode)
   const typedText = useTypingStore((s) => s.typedText)
+  const cursorPos = useTypingStore((s) => s.cursorPos)
   const soundEnabled = useTypingStore((s) => s.soundEnabled)
   const exitTypingMode = useTypingStore((s) => s.exitTypingMode)
   const clearText = useTypingStore((s) => s.clearText)
@@ -12,14 +13,18 @@ export default function TypingOverlay() {
 
   const textRef = useRef(null)
 
-  // Auto-scroll to bottom when text changes
+  // Auto-scroll to keep cursor visible
   useEffect(() => {
     if (textRef.current) {
       textRef.current.scrollTop = textRef.current.scrollHeight
     }
-  }, [typedText])
+  }, [typedText, cursorPos])
 
   if (!typingMode) return null
+
+  // Split text at cursor position for rendering
+  const beforeCursor = typedText.slice(0, cursorPos)
+  const afterCursor = typedText.slice(cursorPos)
 
   return (
     <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[90vw] max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -83,21 +88,22 @@ export default function TypingOverlay() {
           </div>
         </div>
 
-        {/* Text display */}
+        {/* Text display with cursor */}
         <div
           ref={textRef}
           className="px-4 py-3 min-h-[60px] max-h-[120px] overflow-y-auto"
         >
           <p className="font-mono text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-all">
-            {typedText || ''}
-            <span className="inline-block w-[2px] h-4 bg-grim-cyan ml-0.5 animate-pulse align-middle" />
+            {beforeCursor}
+            <span className="inline-block w-[2px] h-[1.1em] bg-grim-cyan animate-pulse align-middle" />
+            {afterCursor}
           </p>
         </div>
 
         {/* Footer hint */}
         <div className="px-4 py-1.5 border-t border-grim-cyan/10">
           <span className="text-[8px] font-mono text-gray-600 uppercase tracking-widest">
-            Press ESC to close • Start clicking keys to exit
+            Press ESC to close • Arrow keys move cursor • Backspace deletes
           </span>
         </div>
       </div>

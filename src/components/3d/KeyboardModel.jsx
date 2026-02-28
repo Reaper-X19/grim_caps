@@ -119,8 +119,8 @@ export default function KeyboardModel({ introComplete = false }) {
             originalPositionsRef.current.set(keyName, keycap.object.position.y)
           }
           const origY = originalPositionsRef.current.get(keyName)
-          keycap.object.position.y = origY - 0.0008
-          setTimeout(() => { keycap.object.position.y = origY }, 100)
+          keycap.object.position.y = origY - 0.005
+          setTimeout(() => { keycap.object.position.y = origY }, 120)
 
           // Always use toggle behavior for intuitive on/off clicking
           toggleKeySelection(keyName)
@@ -401,7 +401,7 @@ export default function KeyboardModel({ introComplete = false }) {
   useEffect(() => {
     if (!groupRef.current) return
 
-    const PRESS_DEPTH = 0.0008 // How far down the key travels (in model units)
+    const PRESS_DEPTH = 0.005 // How far down the key travels (in model units)
     const SPRING_DURATION = 0.08 // seconds for release spring-back
 
     groupRef.current.traverse((child) => {
