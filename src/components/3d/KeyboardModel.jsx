@@ -114,13 +114,12 @@ export default function KeyboardModel({ introComplete = false }) {
             else playKeySound(scancode)
           }
 
-          // Brief press animation on click
-          if (!originalPositionsRef.current.has(keyName)) {
-            originalPositionsRef.current.set(keyName, keycap.object.position.y)
+          // Brief press animation on click — use GLTF original as pressed position
+          const gltfY = originalPositionsRef.current.get(keyName)
+          if (gltfY !== undefined) {
+            keycap.object.position.y = gltfY // press down to GLTF position
+            setTimeout(() => { keycap.object.position.y = gltfY + 0.005 }, 120) // spring back to raised
           }
-          const origY = originalPositionsRef.current.get(keyName)
-          keycap.object.position.y = origY - 0.0015
-          setTimeout(() => { keycap.object.position.y = origY }, 120)
 
           // Always use toggle behavior for intuitive on/off clicking
           toggleKeySelection(keyName)
@@ -397,32 +396,45 @@ export default function KeyboardModel({ introComplete = false }) {
   ])
 
   // ── Key Press Animation ──────────────────────────────────────────────────────
-  // Moves pressed key meshes down (simulating physical press) and springs back on release
-  useEffect(() => {
-    if (!groupRef.current) return
+  // Strategy: Raise ALL keycaps by 0.005 at init so they sit above their GLTF
+  // default. Then press animation moves them DOWN by 0.005 back to the GLTF
+  // position — no switch stems exposed since pressed = original GLTF height.
+  const KEYCAP_RAISE = 0.005
+  const keycapsRaisedRef = useRef(false)
 
-    const PRESS_DEPTH = 0.0015 // Subtle but visible — keeps within keycap shell, no stem exposure
-    const SPRING_DURATION = 0.08 // seconds for release spring-back
+  // Raise all keycaps once after intro completes
+  useEffect(() => {
+    if (!groupRef.current || !introComplete || keycapsRaisedRef.current) return
+
+    groupRef.current.traverse((child) => {
+      if (!child.isMesh || !child.name || !child.name.startsWith('K_')) return
+      // Store the GLTF original Y, then raise
+      originalPositionsRef.current.set(child.name, child.position.y)
+      child.position.y += KEYCAP_RAISE
+    })
+    keycapsRaisedRef.current = true
+  }, [introComplete])
+
+  // Animate pressed keys DOWN and snap released keys back UP
+  useEffect(() => {
+    if (!groupRef.current || !keycapsRaisedRef.current) return
 
     groupRef.current.traverse((child) => {
       if (!child.isMesh || !child.name || !child.name.startsWith('K_')) return
 
       const keyName = child.name
       const isPressed = pressedKeys.has(keyName)
+      const gltfOriginalY = originalPositionsRef.current.get(keyName)
+      if (gltfOriginalY === undefined) return
 
-      // Store original Y position on first encounter
-      if (!originalPositionsRef.current.has(keyName)) {
-        originalPositionsRef.current.set(keyName, child.position.y)
-      }
-
-      const originalY = originalPositionsRef.current.get(keyName)
+      const raisedY = gltfOriginalY + KEYCAP_RAISE
 
       if (isPressed) {
-        // Snap down immediately
-        child.position.y = originalY - PRESS_DEPTH
-      } else if (child.position.y < originalY) {
-        // Spring back up smoothly
-        child.position.y = Math.min(child.position.y + PRESS_DEPTH * 0.3, originalY)
+        // Press DOWN to GLTF original position
+        child.position.y = gltfOriginalY
+      } else {
+        // Snap back to raised position
+        child.position.y = raisedY
       }
     })
   }, [pressedKeys])
