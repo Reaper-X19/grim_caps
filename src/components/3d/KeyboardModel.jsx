@@ -138,15 +138,16 @@ export default function KeyboardModel({ introComplete = false }) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#ff4655')
-            child.material.emissiveIntensity = 1.5
-          } else if (isSelected && selectionLocked) {
+            child.material.emissive = new THREE.Color('#00ffcc')
+            child.material.emissiveIntensity = 0.4
+          } else if (isSelected && selectionLocked && !keyCustomizations[child.name]) {
+            // Only glow confirmed keys that DON'T have customization yet
             if (!child.material.userData.isModified) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#dc2626')
-            child.material.emissiveIntensity = 1.0
+            child.material.emissive = new THREE.Color('#00ffcc')
+            child.material.emissiveIntensity = 0.25
           }
           child.castShadow = true
           child.receiveShadow = true
@@ -199,7 +200,9 @@ export default function KeyboardModel({ introComplete = false }) {
         let boundsToUse = selectedBounds
 
         // Priority 1: Key has customization (applied)
-        if (customization) {
+        // Skip customization if its layer is hidden
+        const ownerLayer = customization ? layers.find(l => l.id === customization.layerId) : null
+        if (customization && ownerLayer?.visible !== false) {
           shouldUseShader = true
           baseColor = customization.baseColor || '#ffffff'
           transforms = customization.textureTransform || transforms
@@ -268,14 +271,14 @@ export default function KeyboardModel({ introComplete = false }) {
               zoom: transforms.zoom,
               offset: new THREE.Vector2(transforms.positionX, transforms.positionY),
               rotation: transforms.rotation * Math.PI / 180,
-              // Selection highlight: active = neon pink, confirmed = deep rose
-              emissive: isSelected
+              // Selection highlight: only glow keys WITHOUT customization
+              emissive: (isSelected && !customization)
                 ? (selectionMode && !selectionLocked)
-                  ? new THREE.Color('#ff4655')   // Active selection: Valorant neon red
-                  : new THREE.Color('#dc2626')   // Locked/confirmed: deep crimson
+                  ? new THREE.Color('#00ffcc')   // Active selection: neon cyan
+                  : new THREE.Color('#00ffcc')   // Locked/confirmed: same cyan, lower intensity
                 : new THREE.Color('#000000'),
-              emissiveIntensity: isSelected
-                ? (selectionMode && !selectionLocked) ? 1.5 : 1.0
+              emissiveIntensity: (isSelected && !customization)
+                ? (selectionMode && !selectionLocked) ? 0.4 : 0.25
                 : 0,
             })
 
@@ -291,14 +294,14 @@ export default function KeyboardModel({ introComplete = false }) {
               zoom: transforms.zoom,
               offset: new THREE.Vector2(transforms.positionX, transforms.positionY),
               rotation: transforms.rotation * Math.PI / 180,
-              // Selection highlight: active = neon pink, confirmed = deep rose
-              emissive: isSelected
+              // Selection highlight: only glow keys WITHOUT customization
+              emissive: (isSelected && !customization)
                 ? (selectionMode && !selectionLocked)
-                  ? new THREE.Color('#ff4655')
-                  : new THREE.Color('#dc2626')
+                  ? new THREE.Color('#00ffcc')
+                  : new THREE.Color('#00ffcc')
                 : new THREE.Color('#000000'),
-              emissiveIntensity: isSelected
-                ? (selectionMode && !selectionLocked) ? 1.5 : 1.0
+              emissiveIntensity: (isSelected && !customization)
+                ? (selectionMode && !selectionLocked) ? 0.4 : 0.25
                 : 0,
             })
           }
@@ -316,23 +319,23 @@ export default function KeyboardModel({ introComplete = false }) {
             }
           }
 
-          // Apply selection highlight for selected keys
-          if (isSelected && selectionMode && !selectionLocked) {
-            // Active selection: grim neon pink
+          // Apply selection highlight for selected keys WITHOUT customization
+          if (isSelected && !customization && selectionMode && !selectionLocked) {
+            // Active selection: neon cyan
             if (!child.material.userData.isModified) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#ff4655')
-            child.material.emissiveIntensity = 1.5
-          } else if (isSelected && selectionLocked) {
-            // Locked/confirmed: deep rose — still visible
+            child.material.emissive = new THREE.Color('#00ffcc')
+            child.material.emissiveIntensity = 0.4
+          } else if (isSelected && !customization && selectionLocked) {
+            // Locked/confirmed: same cyan, subtler
             if (!child.material.userData.isModified) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#dc2626')
-            child.material.emissiveIntensity = 1.0
+            child.material.emissive = new THREE.Color('#00ffcc')
+            child.material.emissiveIntensity = 0.25
           } else {
             // Not in active selection - ensure emissive is cleared
             if (child.material.userData.isModified) {

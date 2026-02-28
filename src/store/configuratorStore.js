@@ -220,6 +220,12 @@ const useConfiguratorStore = create((set, get) => ({
     )
   })),
 
+  renameLayer: (layerId, newName) => set((state) => ({
+    layers: state.layers.map(layer =>
+      layer.id === layerId ? { ...layer, name: newName } : layer
+    )
+  })),
+
   setViewMode: (mode) => set({ viewMode: mode }),
 
   resetTextureTransform: (layerId) => set((state) => ({

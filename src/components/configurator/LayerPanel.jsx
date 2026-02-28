@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import useConfiguratorStore from '../../store/configuratorStore'
 
 export default function LayerPanel() {
@@ -8,6 +9,11 @@ export default function LayerPanel() {
   const removeLayer = useConfiguratorStore((state) => state.removeLayer)
   const setActiveLayer = useConfiguratorStore((state) => state.setActiveLayer)
   const toggleLayerVisibility = useConfiguratorStore((state) => state.toggleLayerVisibility)
+  const renameLayer = useConfiguratorStore((state) => state.renameLayer)
+
+  // Editing state for layer name
+  const [editingLayerId, setEditingLayerId] = useState(null)
+  const [editingName, setEditingName] = useState('')
 
   // Check if active layer is applied (gate for Add Node)
   const activeLayer = layers.find(l => l.id === activeLayerId)
@@ -16,6 +22,28 @@ export default function LayerPanel() {
   // Count keys per layer from keyCustomizations
   const getLayerKeyCount = (layerId) => {
     return Object.values(keyCustomizations).filter(c => c.layerId === layerId).length
+  }
+
+  const startEditing = (layer, e) => {
+    e.stopPropagation()
+    setEditingLayerId(layer.id)
+    setEditingName(layer.name)
+  }
+
+  const finishEditing = () => {
+    if (editingLayerId && editingName.trim()) {
+      renameLayer(editingLayerId, editingName.trim())
+    }
+    setEditingLayerId(null)
+    setEditingName('')
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') finishEditing()
+    if (e.key === 'Escape') {
+      setEditingLayerId(null)
+      setEditingName('')
+    }
   }
 
   return (
@@ -49,6 +77,7 @@ export default function LayerPanel() {
       <div className="space-y-2">
         {layers.map((layer) => {
           const keyCount = getLayerKeyCount(layer.id)
+          const isEditing = editingLayerId === layer.id
           return (
             <div
               key={layer.id}
@@ -81,10 +110,32 @@ export default function LayerPanel() {
                   </div>
 
                   <div className="flex flex-col">
-                    {/* Layer name */}
-                    <span className={`text-xs font-bold uppercase tracking-wide transition-colors ${layer.id === activeLayerId ? 'text-grim-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.5)]' : 'text-gray-400 group-hover:text-white'}`}>
-                      {layer.name}
-                    </span>
+                    {/* Editable layer name */}
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onBlur={finishEditing}
+                        onKeyDown={handleKeyDown}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs font-bold uppercase tracking-wide bg-black/60 border border-grim-cyan/50 text-grim-cyan px-1.5 py-0.5 outline-none focus:border-grim-cyan w-24"
+                        maxLength={20}
+                      />
+                    ) : (
+                      <span
+                        onDoubleClick={(e) => startEditing(layer, e)}
+                        className={`text-xs font-bold uppercase tracking-wide transition-colors cursor-text ${
+                          layer.id === activeLayerId
+                            ? 'text-grim-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.5)]'
+                            : 'text-gray-400 group-hover:text-white'
+                        }`}
+                        title="Double-click to rename"
+                      >
+                        {layer.name}
+                      </span>
+                    )}
                     {/* Status + key count */}
                     <div className="flex items-center gap-2 mt-0.5">
                       {layer.applied ? (
@@ -107,9 +158,9 @@ export default function LayerPanel() {
                       e.stopPropagation()
                       toggleLayerVisibility(layer.id)
                     }}
-                    className="p-1 hover:bg-white/10 transition-colors text-gray-500 hover:text-white"
+                    className={`p-1 hover:bg-white/10 transition-colors ${layer.visible === false ? 'text-red-400' : 'text-gray-500 hover:text-white'}`}
                   >
-                    {layer.visible ? (
+                    {layer.visible !== false ? (
                       <svg className="w-3 h-3 text-grim-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />

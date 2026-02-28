@@ -158,7 +158,7 @@ function StudioLights() {
     <>
       <directionalLight
         position={[5, 10, 7]}
-        intensity={1.8}
+        intensity={2.2}
         color="#fff5ee"
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -168,13 +168,13 @@ function StudioLights() {
         shadow-camera-bottom={-16}
         shadow-bias={-0.001}
       />
-      <directionalLight position={[-7, 4, 5]}  intensity={0.6} color="#d5e8ff" />
-      <directionalLight position={[-1, 7, -9]} intensity={1.0} color="#b0c5ff" />
-      <directionalLight position={[0, 14, 1]}  intensity={0.3} color="#ffffff" />
-      <pointLight position={[-5, 2, 6]}   intensity={0.5}  color="#00ffcc" distance={22} decay={2} />
-      <pointLight position={[7, 0.5, 7]}  intensity={0.25} color="#ffcc88" distance={18} decay={2} />
-      <pointLight position={[0, -1.5, 4]} intensity={0.2}  color="#7733ff" distance={14} decay={2} />
-      <ambientLight intensity={0.15} color="#c0d4ff" />
+      <directionalLight position={[-7, 4, 5]}  intensity={0.8} color="#d5e8ff" />
+      <directionalLight position={[-1, 7, -9]} intensity={1.2} color="#b0c5ff" />
+      <directionalLight position={[0, 14, 1]}  intensity={0.4} color="#ffffff" />
+      <pointLight position={[-5, 2, 6]}   intensity={0.6}  color="#00ffcc" distance={22} decay={2} />
+      <pointLight position={[7, 0.5, 7]}  intensity={0.3}  color="#ffcc88" distance={18} decay={2} />
+      <pointLight position={[0, -1.5, 4]} intensity={0.25} color="#7733ff" distance={14} decay={2} />
+      <ambientLight intensity={0.2} color="#c0d4ff" />
     </>
   )
 }
@@ -263,7 +263,7 @@ export default function KeyboardScene() {
           alpha: true,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 0.85,
+          toneMappingExposure: 0.95,
         }}
         dpr={[1, 2]}
         shadows
