@@ -158,7 +158,7 @@ function StudioLights() {
     <>
       <directionalLight
         position={[5, 10, 7]}
-        intensity={3.0}
+        intensity={2.4}
         color="#fff5ee"
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -168,13 +168,13 @@ function StudioLights() {
         shadow-camera-bottom={-16}
         shadow-bias={-0.001}
       />
-      <directionalLight position={[-7, 4, 5]}  intensity={1.1} color="#d5e8ff" />
-      <directionalLight position={[-1, 7, -9]} intensity={1.8} color="#b0c5ff" />
-      <directionalLight position={[0, 14, 1]}  intensity={0.6} color="#ffffff" />
-      <pointLight position={[-5, 2, 6]}   intensity={0.9}  color="#00ffcc" distance={22} decay={2} />
-      <pointLight position={[7, 0.5, 7]}  intensity={0.45} color="#ffcc88" distance={18} decay={2} />
-      <pointLight position={[0, -1.5, 4]} intensity={0.35} color="#7733ff" distance={14} decay={2} />
-      <ambientLight intensity={0.28} color="#c0d4ff" />
+      <directionalLight position={[-7, 4, 5]}  intensity={0.85} color="#d5e8ff" />
+      <directionalLight position={[-1, 7, -9]} intensity={1.4} color="#b0c5ff" />
+      <directionalLight position={[0, 14, 1]}  intensity={0.45} color="#ffffff" />
+      <pointLight position={[-5, 2, 6]}   intensity={0.7}  color="#00ffcc" distance={22} decay={2} />
+      <pointLight position={[7, 0.5, 7]}  intensity={0.35} color="#ffcc88" distance={18} decay={2} />
+      <pointLight position={[0, -1.5, 4]} intensity={0.25} color="#7733ff" distance={14} decay={2} />
+      <ambientLight intensity={0.22} color="#c0d4ff" />
     </>
   )
 }

@@ -138,15 +138,15 @@ export default function KeyboardModel({ introComplete = false }) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#ff2d7a')
-            child.material.emissiveIntensity = 0.45
+            child.material.emissive = new THREE.Color('#ff4655')
+            child.material.emissiveIntensity = 0.5
           } else if (isSelected && selectionLocked) {
             if (!child.material.userData.isModified) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#e11d48')
-            child.material.emissiveIntensity = 0.3
+            child.material.emissive = new THREE.Color('#dc2626')
+            child.material.emissiveIntensity = 0.35
           }
           child.castShadow = true
           child.receiveShadow = true
@@ -271,11 +271,11 @@ export default function KeyboardModel({ introComplete = false }) {
               // Selection highlight: active = neon pink, confirmed = deep rose
               emissive: isSelected
                 ? (selectionMode && !selectionLocked)
-                  ? new THREE.Color('#ff2d7a')   // Active selection: grim neon pink
-                  : new THREE.Color('#e11d48')   // Locked/confirmed: deep rose
+                  ? new THREE.Color('#ff4655')   // Active selection: Valorant neon red
+                  : new THREE.Color('#dc2626')   // Locked/confirmed: deep crimson
                 : new THREE.Color('#000000'),
               emissiveIntensity: isSelected
-                ? (selectionMode && !selectionLocked) ? 0.45 : 0.3
+                ? (selectionMode && !selectionLocked) ? 0.5 : 0.35
                 : 0,
             })
 
@@ -294,11 +294,11 @@ export default function KeyboardModel({ introComplete = false }) {
               // Selection highlight: active = neon pink, confirmed = deep rose
               emissive: isSelected
                 ? (selectionMode && !selectionLocked)
-                  ? new THREE.Color('#ff2d7a')
-                  : new THREE.Color('#e11d48')
+                  ? new THREE.Color('#ff4655')
+                  : new THREE.Color('#dc2626')
                 : new THREE.Color('#000000'),
               emissiveIntensity: isSelected
-                ? (selectionMode && !selectionLocked) ? 0.45 : 0.3
+                ? (selectionMode && !selectionLocked) ? 0.5 : 0.35
                 : 0,
             })
           }
@@ -323,16 +323,16 @@ export default function KeyboardModel({ introComplete = false }) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#ff2d7a')
-            child.material.emissiveIntensity = 0.45
+            child.material.emissive = new THREE.Color('#ff4655')
+            child.material.emissiveIntensity = 0.5
           } else if (isSelected && selectionLocked) {
             // Locked/confirmed: deep rose — still visible
             if (!child.material.userData.isModified) {
               child.material = child.material.clone()
               child.material.userData.isModified = true
             }
-            child.material.emissive = new THREE.Color('#e11d48')
-            child.material.emissiveIntensity = 0.3
+            child.material.emissive = new THREE.Color('#dc2626')
+            child.material.emissiveIntensity = 0.35
           } else {
             // Not in active selection - ensure emissive is cleared
             if (child.material.userData.isModified) {
