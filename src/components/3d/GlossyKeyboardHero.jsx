@@ -73,8 +73,8 @@ export default function GlossyKeyboardHero({ mouse }) {
   const rotX = 1.10, rotY = 0.40, rotZ = 0.17
   const scale = 3.5
   const emissionColor = '#00ffcc'
-  const emissionIntensity = 0.5
-  const keycapEmissionIntensity = 0.10
+  const emissionIntensity = 0.25
+  const keycapEmissionIntensity = 0  // keycaps don't glow — clean look
   const metalness = 0.30
   const roughness = 0.30
 
@@ -91,7 +91,7 @@ export default function GlossyKeyboardHero({ mouse }) {
       if (child.name === 'Knob' || child.name === 'knob') {
         child.material = new THREE.MeshStandardMaterial({
           color: child.material.color || new THREE.Color(0xCCCCCC),
-          emissive: emissiveColor, emissiveIntensity: 0.1 * currentGlow,
+          emissive: emissiveColor, emissiveIntensity: 0.02 * currentGlow,
           metalness, roughness,
         })
       } else if (child.name.toLowerCase().includes('emission')) {
@@ -103,8 +103,6 @@ export default function GlossyKeyboardHero({ mouse }) {
       } else if (child.name.startsWith('K_')) {
         child.material = new THREE.MeshStandardMaterial({
           color: child.material.color || new THREE.Color(0x333333),
-          emissive: emissiveColor,
-          emissiveIntensity: keycapEmissionIntensity * currentGlow,
           metalness, roughness,
         })
       } else {
@@ -176,7 +174,7 @@ export default function GlossyKeyboardHero({ mouse }) {
       // ── Phase 3: Glow pulse on landing ─────────────────────────────────
       // Emission spikes briefly on impact
       tl.to(glowMult, {
-        current: 3.0,
+        current: 1.8,
         duration: 0.15,
         ease: 'power2.in',
       }, 1.15)
@@ -216,13 +214,10 @@ export default function GlossyKeyboardHero({ mouse }) {
 
     // 4. Update emission glow if pulse is active
     if (glowMult.current !== 1.0 && modelRef.current) {
-      const emissiveColor = new THREE.Color(emissionColor)
       modelRef.current.traverse(child => {
         if (!child.isMesh) return
         if (child.name.toLowerCase().includes('emission')) {
           child.material.emissiveIntensity = emissionIntensity * glowMult.current
-        } else if (child.name.startsWith('K_')) {
-          child.material.emissiveIntensity = keycapEmissionIntensity * glowMult.current
         }
       })
     }

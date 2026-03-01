@@ -439,28 +439,6 @@ export default function KeyboardModel({ introComplete = false }) {
     })
   }, [pressedKeys])
 
-  // ── Play sound on 3D key click ────────────────────────────────────────────────
-  useEffect(() => {
-    if (!groupRef.current) return
-
-    const handleMeshClick = async (e) => {
-      // Initialize sound engine on first click if needed
-      if (!isSoundReady()) {
-        await initSoundEngine()
-      }
-
-      const scancode = MODEL_TO_SCANCODE[e.object?.name]
-      if (scancode) {
-        playKeySound(scancode)
-      }
-    }
-
-    // We don't attach directly to meshes — sound is triggered via the existing
-    // raycaster click handler. Instead, we hook into the typing store from
-    // the existing click handler. This is handled by useKeyboardHandler for
-    // physical keys and by the raycaster for mouse clicks.
-    // For mouse clicks on 3D keys, we play sound in the existing click handler.
-  }, [])
 
   return (
     <group
