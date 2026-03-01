@@ -47,7 +47,7 @@ export default function ClonedKeyboard(props) {
         child.material = new THREE.MeshStandardMaterial({
           color:             emissColor,
           emissive:          emissColor,
-          emissiveIntensity: 0.30,
+          emissiveIntensity: 0.15,
           metalness: 0,
           roughness: 0.15,
           toneMapped: false,

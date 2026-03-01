@@ -104,15 +104,13 @@ function SceneCanvas({ anim, onCreated }) {
       style={{ width: '100%', height: '100%', background: 'transparent' }}
     >
       <PerspectiveCamera makeDefault position={camPos} fov={camFov} near={0.1} far={100} />
-      {/* Ghostly depth fog — fades edges into darkness */}
-      <fog attach="fog" args={['#050510', 6, 18]} />
       <CustomEnvironment />
       <Suspense fallback={null}>
         <Scene />
       </Suspense>
       <EffectComposer disableNormalPass>
-        <Bloom luminanceThreshold={0.45} luminanceSmoothing={0.9} height={300} intensity={0.9} />
-        <Vignette eskil={false} offset={0.1} darkness={1.5} />
+        <Bloom luminanceThreshold={0.3} luminanceSmoothing={0.9} height={300} intensity={1.2} />
+        <Vignette eskil={false} offset={0.1} darkness={1.2} />
       </EffectComposer>
     </Canvas>
   )
