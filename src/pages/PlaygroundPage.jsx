@@ -109,8 +109,8 @@ function SceneCanvas({ anim, onCreated }) {
         <Scene />
       </Suspense>
       <EffectComposer disableNormalPass>
-        <Bloom luminanceThreshold={0.3} luminanceSmoothing={0.9} height={300} intensity={1.2} />
-        <Vignette eskil={false} offset={0.1} darkness={1.2} />
+        <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.9} height={300} intensity={0.7} />
+        <Vignette eskil={false} offset={0.1} darkness={1.4} />
       </EffectComposer>
     </Canvas>
   )
